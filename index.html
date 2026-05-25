@@ -769,7 +769,7 @@ const TASKS = [
     asgn:'Mr.A', prop:'{PROP_A}', book:'{SNAPSHOT_BOOK1} | {PREV_MM}/01/{YEAR} Start',
     mt:'7:09 PM - 7:29 PM', india:'Fri 6:39 AM - 6:59 AM', eastern:'9:09 PM - 9:29 PM',
     status:100, tz:'Eastern' },
-  { id:21, dg:'thu', task:'Notify Mr.R that Copy Budgets is Submitted',
+  { id:21, dg:'thu', task:'Notify {MEMBER_R} that Copy Budgets is Submitted',
     asgn:'Mr.A', prop:'', book:'',
     mt:'7:29 PM - 7:30 PM', india:'Fri 6:59 AM - 7:00 AM', eastern:'9:29 PM - 9:30 PM',
     status:0, tz:'Eastern' },
@@ -1124,6 +1124,10 @@ function resolve(text) {
     .replace(/\{PROP_B\}/g, propListB(y, m))
     .replace(/\{PROP_C\}/g, propListC(y, m))
     .replace(/\{LAST_YEAR_BOOK\}/g, PARAMS.lastYearBook)
+    .replace(/\{MEMBER_A\}/g, MEMBERS.A)
+    .replace(/\{MEMBER_R\}/g, MEMBERS.R)
+    .replace(/\{MEMBER_L\}/g, MEMBERS.L)
+    .replace(/\{MEMBER_M\}/g, MEMBERS.M)
     .replace(/\{SNAPSHOT_BOOK1\}/g, PARAMS.snapshotBook1)
     .replace(/\{SNAPSHOT_BOOK2\}/g, PARAMS.snapshotBook2)
     .replace(/\{BUSINESS_PLAN_PARAM\}/g, PARAMS.businessPlanParam)
