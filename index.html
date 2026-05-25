@@ -1462,7 +1462,7 @@ function taskRow(t) {
   if (t.isHeader) {
     return `<tr style="background:#f0fdf4">
       <td class="t-num">${t.id}</td>
-      <td colspan="13"><div class="t-name-hdr">${t.task}</div></td>
+      <td colspan="13"><div class="t-name-hdr">${resolve(t.task)}</div></td>
     </tr>`;
   }
   const k = akey(t.id);
@@ -1474,7 +1474,7 @@ function taskRow(t) {
   const nm   = displayName(t.asgn);
   return `<tr>
     <td class="t-num">${t.id}</td>
-    <td class="t-name" title="${t.task}">${t.task}</td>
+    <td class="t-name" title="${resolve(t.task)}">${resolve(t.task)}</td>
     <td><span class="badge-assigned">${nm}</span></td>
     <td class="prop-cell" title="${prop}">${prop || '-'}</td>
     <td class="book-cell" title="${book}">${book || '-'}</td>
@@ -1631,7 +1631,7 @@ async function buildWorkbook(withActuals) {
     tasks.forEach(t => {
       if (t.isHeader) {
         // Sub-header row
-        const sh = wsT.addRow({day: '  ' + t.task});
+        const sh = wsT.addRow({day: '  ' + resolve(t.task)});
         wsT.mergeCells(sh.number, 1, sh.number, XL_COLS.length);
         styleCell(sh.getCell(1), 'FFF0FDF4', {bold:true, color:{argb:'FF15803D'}}, true, {horizontal:'left', indent:2});
         sh.height = 16;
@@ -1648,7 +1648,7 @@ async function buildWorkbook(withActuals) {
 
       const row = wsT.addRow({
         day:     dayLabel[t.dg],
-        task:    t.task,
+        task:    resolve(t.task),
         asgn:    displayName(t.asgn),
         prop:    resolve(t.prop) || '',
         book:    resolve(t.book) || '',
@@ -1911,7 +1911,7 @@ function renderStatus() {
     return `
       <tr>
         <td style="width:32px;color:#94a3b8">${t.id}</td>
-        <td style="max-width:300px" title="${t.task}">${t.task}</td>
+        <td style="max-width:300px" title="${resolve(t.task)}">${resolve(t.task)}</td>
         <td style="width:70px;text-align:center">${displayName(t.asgn)}</td>
         <td style="width:80px;text-align:center;color:#64748b">${dayLbl[t.dg]}</td>
         <td style="width:72px;text-align:center"><span class="st-pill ${cls}">${st}%</span></td>
