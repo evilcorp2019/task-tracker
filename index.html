@@ -1640,8 +1640,7 @@ async function buildWorkbook(withActuals) {
 
       const k = akey(t.id);
       const a = STATE.actuals[k] || initActual(t);
-      const sv100 = withActuals && Number(a.status) === 100;
-      const rowBg = sv100 ? 'FFD1FAE5' : (alt % 2 === 0 ? 'FFFFFFFF' : 'FFF1F5F9');
+      const rowBg = alt % 2 === 0 ? 'FFFFFFFF' : 'FFF1F5F9';
       alt++;
 
       const startVal = withActuals ? timeStrToExcel(a.start) : null;
@@ -1657,65 +1656,86 @@ async function buildWorkbook(withActuals) {
         tz:      withActuals ? (a.tz || '') : '',
         start:   startVal !== null ? startVal : '',
         end:     endVal   !== null ? endVal   : '',
-        dur:     '',   // always formula-driven, set below
+        dur:     '',
         comment: withActuals ? (a.comment || '') : '',
       });
       row.height = 16;
 
-      // Apply time format to Actual Start (col 8) and Actual End (col 9)
       const rn = row.number;
       const startCell = row.getCell(8);
       const endCell   = row.getCell(9);
       const durCell   = row.getCell(10);
 
-      if (startVal !== null) startCell.numFmt = 'h:MM AM/PM';
-      if (endVal   !== null) endCell.numFmt   = 'h:MM AM/PM';
+      // Time format on start/end cells
+      startCell.numFmt = 'h:MM AM/PM';
+      endCell.numFmt   = 'h:MM AM/PM';
 
-      // Timezone dropdown (col 7) - data validation with the 3 timezones
-      const tzCell = row.getCell(7);
-      tzCell.dataValidation = {
-        type:        'list',
-        allowBlank:  true,
-        showDropDown: false,
-        formulae:    ['"Mountain,India,Eastern"'],
-        showErrorMessage: true,
-        errorStyle:  'warning',
-        errorTitle:  'Invalid Timezone',
-        error:       'Please select Mountain, India, or Eastern'
+      // Timezone dropdown
+      row.getCell(7).dataValidation = {
+        type:'list', allowBlank:true, showDropDown:false,
+        formulae:['"Mountain,India,Eastern"'],
+        showErrorMessage:true, errorStyle:'warning',
+        errorTitle:'Invalid Timezone', error:'Please select Mountain, India, or Eastern'
       };
 
-      // Duration formula: handles overnight (end < start) by adding 1 day
-      // Displays as Xh MMm  e.g. "2h 05m"
-      if (withActuals && (startVal !== null || endVal !== null)) {
-        durCell.value = {
-          formula: `IF(AND(H${rn}<>"",I${rn}<>""),IF(I${rn}>=H${rn},I${rn}-H${rn},1+I${rn}-H${rn}),"")`,
-          result: ''
-        };
-        durCell.numFmt = '[h]:mm:ss';
-      }
+      // Status dropdown
+      row.getCell(6).dataValidation = {
+        type:'list', allowBlank:true, showDropDown:false,
+        formulae:['"100%,50%,0%"'],
+        showErrorMessage:true, errorStyle:'warning',
+        errorTitle:'Invalid Status', error:'Please select 100%, 50%, or 0%'
+      };
+
+      // Duration formula on ALL rows (works in blank template too)
+      // Handles overnight: if end < start, adds 1 day
+      durCell.value = {
+        formula: `IF(AND(H${rn}<>"",I${rn}<>""),IF(I${rn}>=H${rn},I${rn}-H${rn},1+I${rn}-H${rn}),"")`,
+        result: ''
+      };
+      durCell.numFmt = '[h]:mm:ss';
 
       row.eachCell({includeEmpty:true}, (c, ci) => {
-        if (ci === 6 && withActuals) {
-          // Status color
-          const sv = Number(a.status);
-          const sBg = sv === 100 ? 'FF6EE7B7' : sv === 50 ? 'FFFEF3C7' : 'FFFEE2E2';
-          const sFg = sv === 100 ? 'FF065F46' : sv === 50 ? 'FFB45309' : 'FFDC2626';
-          styleCell(c, sBg, {bold:true, color:{argb:sFg}}, true, {horizontal:'center'});
-        } else if (ci === 8 || ci === 9) {
-          // Start / End time cells
-          styleCell(c, rowBg, {}, true, {horizontal:'center'});
-        } else if (ci === 10) {
-          // Duration cell
-          styleCell(c, rowBg, {}, true, {horizontal:'center'});
-        } else {
-          styleCell(c, rowBg, {}, true, {
-            wrapText: ci === 2,
-            horizontal: ci === 3 ? 'center' : 'left'
-          });
-        }
+        styleCell(c, rowBg, {}, true, {
+          horizontal: (ci === 3 || ci === 6 || ci === 7 || ci === 8 || ci === 9 || ci === 10) ? 'center' : 'left',
+          wrapText: ci === 2
+        });
       });
     });
   });
+
+  // Conditional formatting: row turns light green when status = 100%
+  // Row turns light amber when status = 50%
+  // Applied to entire data range so it works when user fills Excel manually
+  const lastRow = wsT.rowCount;
+  if (lastRow > 1) {
+    wsT.addConditionalFormatting({
+      ref: `A2:K${lastRow}`,
+      rules: [{
+        priority: 1,
+        type: 'expression',
+        formulae: ['$F2="100%"'],
+        style: {fill: {type:'pattern', pattern:'solid', fgColor:{argb:'FFD1FAE5'}}}
+      }]
+    });
+    wsT.addConditionalFormatting({
+      ref: `A2:K${lastRow}`,
+      rules: [{
+        priority: 2,
+        type: 'expression',
+        formulae: ['$F2="50%"'],
+        style: {fill: {type:'pattern', pattern:'solid', fgColor:{argb:'FFFEF9C3'}}}
+      }]
+    });
+    wsT.addConditionalFormatting({
+      ref: `A2:K${lastRow}`,
+      rules: [{
+        priority: 3,
+        type: 'expression',
+        formulae: ['$F2="0%"'],
+        style: {fill: {type:'pattern', pattern:'solid', fgColor:{argb:'FFFEE2E2'}}}
+      }]
+    });
+  }
 
   return wb;
 }
