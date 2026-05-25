@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monthly Task Time Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  <style>
+:root {
+  --navy:        #0f172a;
+  --navy-mid:    #1e293b;
+  --blue:        #2563eb;
+  --blue-lt:     #dbeafe;
+  --amber:       #b45309;
+  --amber-lt:    #fef3c7;
+  --green:       #15803d;
+  --green-lt:    #dcfce7;
+  --purple:      #6d28d9;
+  --purple-lt:   #ede9fe;
+  --slate:       #64748b;
+  --border:      #e2e8f0;
+  --bg:          #f1f5f9;
+  --white:       #ffffff;
+  --text:        #0f172a;
+  --red:         #dc2626;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 13px; }
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ---- HEADER ---- */
+.hdr {
+  background: var(--navy);
+  color: #fff;
+  padding: 0 20px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+.hdr-left { display: flex; align-items: center; gap: 14px; }
+.app-title { font-size: 15px; font-weight: 700; letter-spacing: .3px; }
+.month-badge {
+  background: rgba(255,255,255,.15);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.hdr-right { display: flex; align-items: center; gap: 8px; }
+.hdr select {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.25);
+  color: #fff;
+  padding: 5px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+.hdr select option { background: var(--navy-mid); }
+.btn {
+  padding: 6px 14px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all .15s;
+  font-family: 'IBM Plex Sans', sans-serif;
+  white-space: nowrap;
+}
+.btn-ghost  { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25); color: #fff; }
+.btn-ghost:hover  { background: rgba(255,255,255,.2); }
+.btn-blue   { background: var(--blue); color: #fff; }
+.btn-blue:hover   { background: #1d4ed8; }
+.btn-green  { background: #166534; color: #fff; }
+.btn-green:hover  { background: #14532d; }
+
+/* ---- DATE BAR ---- */
+.date-bar {
+  background: var(--navy-mid);
+  color: rgba(255,255,255,.75);
+  padding: 7px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 11.5px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.date-bar b { color: #93c5fd; }
+
+/* ---- ADMIN PANEL ---- */
+.admin-wrap {
+  background: #fff;
+  border-bottom: 2px solid var(--border);
+  padding: 14px 20px 18px;
+}
+.admin-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.admin-top h2 { font-size: 13px; font-weight: 700; color: var(--navy); }
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px 16px;
+}
+.sec-label {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 4px;
+}
+.fg { display: flex; flex-direction: column; gap: 3px; }
+.fg label { font-size: 10.5px; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: .4px; }
+.fg input, .fg select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+.fg input:focus, .fg select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37,99,235,.1); }
+
+/* ---- TASK CONTAINER ---- */
+.task-wrap { padding: 14px 20px; }
+.day-group { margin-bottom: 18px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.day-hdr {
+  padding: 9px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+}
+.day-hdr.pre  { background: #92400e; }
+.day-hdr.thu  { background: #1e40af; }
+.day-hdr.fri  { background: #065f46; }
+.day-hdr.post { background: #4c1d95; }
+.day-date { font-weight: 400; opacity: .8; font-size: 10.5px; }
+.task-cnt { margin-left: auto; background: rgba(255,255,255,.2); padding: 2px 8px; border-radius: 10px; font-size: 11px; }
+
+/* ---- TASK TABLE ---- */
+.tbl-wrap { overflow-x: auto; background: #fff; }
+table.ttbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  min-width: 1200px;
+}
+table.ttbl th {
+  background: #f8fafc;
+  padding: 7px 8px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+table.ttbl td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+table.ttbl tr:hover td { background: #f8fafc; }
+table.ttbl tr:last-child td { border-bottom: none; }
+.t-num   { color: var(--slate); font-weight: 600; font-size: 10.5px; width: 28px; min-width: 28px; }
+.t-name  { font-weight: 500; min-width: 220px; max-width: 280px; line-height: 1.4; }
+.t-name-hdr {
+  font-weight: 700;
+  color: var(--navy);
+  background: #f0fdf4;
+  padding: 6px 8px;
+  border-left: 3px solid var(--green);
+  min-width: 220px;
+}
+.badge-assigned {
+  display: inline-block;
+  background: var(--blue-lt);
+  color: #1e40af;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.fc {
+  font-size: 11px;
+  color: var(--slate);
+  white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 130px;
+}
+.fc.na { color: #cbd5e1; font-style: italic; }
+.prop-cell, .book-cell {
+  font-size: 11px;
+  color: #475569;
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- INPUTS ---- */
+input.ti {
+  width: 82px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+input.ti:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37,99,235,.1); }
+.time-wrap { display: flex; align-items: center; gap: 3px; }
+.now-btn {
+  padding: 3px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--blue);
+  border-radius: 3px;
+  background: var(--blue-lt);
+  color: var(--blue);
+  font-family: 'IBM Plex Sans', sans-serif;
+  white-space: nowrap;
+  transition: all .15s;
+  line-height: 1.4;
+}
+.now-btn:hover { background: var(--blue); color: #fff; }
+
+select.ss {
+  padding: 4px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  outline: none;
+  cursor: pointer;
+  width: 62px;
+}
+select.ss.s100 { background: #dcfce7; color: #15803d; border-color: #86efac; }
+select.ss.s50  { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
+select.ss.s0   { background: #fee2e2; color: var(--red); border-color: #fca5a5; }
+
+select.tzs {
+  padding: 4px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  outline: none;
+  width: 82px;
+  background: #f8fafc;
+  cursor: pointer;
+}
+input.ci {
+  width: 150px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  outline: none;
+  transition: border-color .15s;
+}
+input.ci:focus { border-color: var(--blue); }
+.dur-cell {
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 700;
+  font-family: 'IBM Plex Mono', monospace;
+  min-width: 50px;
+  white-space: nowrap;
+}
+
+/* ---- SAVE TOAST ---- */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #1e293b;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+  opacity: 0;
+  transition: opacity .3s;
+  z-index: 999;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* ---- TABS ---- */
+.tab-bar {
+  background: var(--navy-mid);
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  border-bottom: 2px solid rgba(255,255,255,.08);
+}
+.tab-btn {
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,.5);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: color .15s, border-color .15s;
+  letter-spacing: .3px;
+}
+.tab-btn:hover  { color: rgba(255,255,255,.8); }
+.tab-btn.active { color: #fff; border-bottom-color: #3b82f6; }
+
+/* ---- STATUS TAB ---- */
+.stat-wrap { padding: 16px 20px; }
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.stat-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.stat-card .sc-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+.stat-card .sc-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1;
+}
+.stat-card .sc-sub {
+  font-size: 12px;
+  color: var(--slate);
+  margin-top: 3px;
+}
+.stat-card.c-green .sc-value { color: var(--green); }
+.stat-card.c-amber .sc-value { color: var(--amber); }
+.stat-card.c-red   .sc-value { color: var(--red); }
+
+.stat-section-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  margin-bottom: 10px;
+}
+.group-prog-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+.prog-row { margin-bottom: 14px; }
+.prog-row:last-child { margin-bottom: 0; }
+.prog-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+.prog-label { font-weight: 600; color: var(--navy); }
+.prog-info  { color: var(--slate); }
+.prog-info b { color: var(--navy); }
+.prog-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+.prog-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .4s ease;
+}
+
+.detail-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.detail-filters select {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  outline: none;
+  background: #fff;
+  cursor: pointer;
+  color: var(--text);
+}
+.detail-tbl-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+table.dtbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+table.dtbl th {
+  background: #f8fafc;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--slate);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+table.dtbl td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+table.dtbl tr:last-child td { border-bottom: none; }
+table.dtbl tr:nth-child(even) td { background: #f8fafc; }
+.st-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.st-100 { background: #dcfce7; color: #15803d; }
+.st-50  { background: #fef3c7; color: #b45309; }
+.st-0   { background: #fee2e2; color: #dc2626; }
+
+/* ---- AUTH MODAL ---- */
+.auth-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.auth-box {
+  background: #fff; border-radius: 10px; padding: 28px 32px;
+  width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.25);
+}
+.auth-box h3 { font-size: 16px; font-weight: 700; color: var(--navy); margin: 0 0 6px; }
+.auth-box p  { font-size: 12.5px; color: var(--slate); margin: 0 0 16px; line-height: 1.5; }
+.auth-box input[type=password] {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+  border-radius: 5px; font-size: 13px; font-family: 'IBM Plex Sans', sans-serif;
+  outline: none; margin-bottom: 8px; box-sizing: border-box;
+}
+.auth-box input[type=password]:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(37,99,235,.1); }
+.auth-error { font-size: 12px; color: var(--red); min-height: 16px; margin-bottom: 12px; font-weight: 500; }
+.auth-btns  { display: flex; gap: 8px; justify-content: flex-end; }
+.auth-btns button {
+  padding: 7px 16px; border-radius: 5px; font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; border: none;
+}
+.auth-cancel { background: #f1f5f9; color: var(--slate); }
+.auth-cancel:hover { background: #e2e8f0; }
+.auth-submit { background: var(--blue); color: #fff; }
+.auth-submit:hover { background: #1d4ed8; }
+
+/* ---- LOGIN SCREEN ---- */
+.login-screen {
+  position: fixed; inset: 0; background: var(--navy);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000; flex-direction: column; gap: 0;
+}
+.login-card {
+  background: #fff; border-radius: 12px; padding: 36px 40px;
+  width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,.4);
+}
+.login-logo {
+  text-align: center; margin-bottom: 24px;
+}
+.login-logo .app-name {
+  font-size: 18px; font-weight: 700; color: var(--navy); display: block; margin-top: 8px;
+}
+.login-logo .app-sub {
+  font-size: 12px; color: var(--slate); margin-top: 4px; display: block;
+}
+.login-card label {
+  display: block; font-size: 11px; font-weight: 700; color: var(--slate);
+  text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
+}
+.login-card input[type=password] {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 13px; font-family: 'IBM Plex Sans', sans-serif;
+  outline: none; box-sizing: border-box; margin-bottom: 8px;
+  transition: border-color .15s;
+}
+.login-card input[type=password]:focus {
+  border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+.login-error {
+  font-size: 12px; color: var(--red); font-weight: 500;
+  min-height: 18px; margin-bottom: 10px;
+}
+.login-btn {
+  width: 100%; padding: 10px; background: var(--blue); color: #fff;
+  border: none; border-radius: 6px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+  transition: background .15s; letter-spacing: .2px;
+}
+.login-btn:hover { background: #1d4ed8; }
+.login-note {
+  text-align: center; font-size: 11px; color: rgba(255,255,255,.35);
+  margin-top: 20px;
+}
+
+
+  </style>
+</head>
+<body>
+
+<!-- ========= LOGIN SCREEN ========= -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="10" fill="#0f172a"/>
+        <rect x="10" y="18" width="20" height="14" rx="3" fill="#3b82f6"/>
+        <path d="M14 18v-4a6 6 0 0 1 12 0v4" stroke="#93c5fd" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="20" cy="25" r="2" fill="#fff"/>
+      </svg>
+      <span class="app-name">Monthly Task Time Tracker</span>
+      <span class="app-sub">Enter your password to continue</span>
+    </div>
+    <label>Password</label>
+    <input type="password" id="authInput" placeholder="Enter password"
+           onkeydown="if(event.key==='Enter')submitAuth()">
+    <div class="login-error" id="authError"></div>
+    <button class="login-btn" onclick="submitAuth()">Sign In</button>
+  </div>
+  <div class="login-note">Session ends when this tab is closed</div>
+</div>
+
+<!-- ========= APP (hidden until login) ========= -->
+<div id="appContent" style="display:none">
+
+<!-- ========= HEADER ========= -->
+<div class="hdr">
+  <div class="hdr-left">
+    <div class="app-title">Monthly Task Time Tracker</div>
+    <div class="month-badge" id="monthBadge">May 2026</div>
+  </div>
+  <div class="hdr-right">
+    <select id="monthSel" onchange="onMonthChange()"></select>
+    <button class="btn btn-ghost" onclick="toggleAdmin()" id="adminBtn">Admin Panel</button>
+    <button class="btn btn-blue" onclick="generateExcel()">Generate Excel</button>
+    <button class="btn btn-green" onclick="exportActuals()">Export with Actuals</button>
+  </div>
+</div>
+
+<!-- ========= DATE BAR ========= -->
+<div class="date-bar" id="dateBar"></div>
+
+<!-- ========= TAB BAR ========= -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tabBtnTasks"  onclick="switchTab('tasks')">Task List</button>
+  <button class="tab-btn"        id="tabBtnStatus" onclick="switchTab('status')">Status</button>
+</div>
+
+<!-- ========= ADMIN PANEL ========= -->
+<div class="admin-wrap" id="adminPanel" style="display:none"></div>
+
+<!-- ========= TASK LIST ========= -->
+<div id="taskWrap" class="task-wrap"></div>
+
+<!-- ========= STATUS TAB ========= -->
+<div id="statusWrap" class="stat-wrap" style="display:none"></div>
+
+
+
+</div><!-- end #appContent -->
+
+<!-- ========= TOAST ========= -->
+<div class="toast" id="toast">Saved</div>
+
+<script>
+// ============================================================
+// ACCESS CONTROL
+// Change PASSWORD below to update the app password.
+// Status tab and task VIEW are public (no password needed).
+// Password is required to edit times, status, or Admin Panel.
+// ============================================================
+const PASSWORD = 'tracker2026';
+let SESSION_UNLOCKED = false;
+
+// ============================================================
+// SECTION 1: TEAM MEMBERS
+// Change the values (right side) to update display names.
+// Keys on the left (A, R, L, M) must NOT be changed.
+// ============================================================
+const MEMBERS = {
+  A: 'Mr.A',
+  R: 'Mr.R',
+  L: 'Mr.L',
+  M: 'Mr.M'
+};
+
+// ============================================================
+// SECTION 2: MONTHLY PARAMETERS
+// Admin updates these each month in the Admin Panel.
+// These are default values (May 2026 baseline).
+// ============================================================
+let PARAMS = {
+  list1:             '.2026q2^.2026q2a^.2026q2d^.2026q2r',
+  list2:             '.2026q2^.2026q2a^.2026q2d^.2026q2r',
+  lastYearBook:      'May 2025',
+  snapshotBook1:     'May 2026',
+  snapshotBook2:     '',
+  rollingBook:       'Rolling Forecast',
+  snapshotParam:     "0^''^0d45e964.groups.Company.com@amer.teams.ms^",
+  businessPlanParam: "1^''^0d45e964.groups.Company.com@amer.teams.ms^",
+  selectedYear:      2026,
+  selectedMonth:     5,
+  dateOverrides:     {}
+};
+
+// ============================================================
+// SECTION 3: TASK LIST
+// Hardcoded from May 2026 Excel blueprint.
+// Modify only if the annual task list changes.
+//
+// dayGroup: 'pre' = Pre-Week, 'thu' = Thursday,
+//           'fri' = Friday,  'post' = Post-Week
+//
+// Token placeholders resolved at runtime:
+//   {LIST1_LIST2}   -> list1 + list2
+//   {LAST_YEAR_BOOK} -> lastYearBook
+//   {SNAPSHOT_BOOK1} -> snapshotBook1
+//   {ROLLING_BOOK}   -> rollingBook
+//   {SNAPSHOT_PARAM} -> snapshotParam
+//   {YEAR}           -> selected year
+//   {YEAR_10}        -> selected year + 10
+//   {MONTH}          -> selected month name
+// ============================================================
+const TASKS = [
+  // PRE-WEEK
+  { id:1,  dg:'pre', task:'Review Property Lists',
+    asgn:'Mr.A', prop:'{PROP_A}', book:'',
+    mt:'', india:'', eastern:'', status:100, tz:'Eastern' },
+  { id:2,  dg:'pre', task:'Create New Property Lists',
+    asgn:'Mr.A', prop:'{PROP_B}', book:'',
+    mt:'', india:'', eastern:'', status:100, tz:'Eastern' },
+  { id:3,  dg:'pre', task:'Unlock Budgets from Prior Year Snapshot Book',
+    asgn:'Mr.R', prop:'', book:'{LAST_YEAR_BOOK}',
+    mt:'', india:'', eastern:'', status:100, tz:'India' },
+  { id:4,  dg:'pre', task:'Delete Budget from Prior Year Books',
+    asgn:'Mr.R', prop:'', book:'{LAST_YEAR_BOOK}',
+    mt:'', india:'', eastern:'', status:100, tz:'India' },
+  { id:5,  dg:'pre', task:'Rename Prior Year Book to "Month + Current Year" / Verify no existing Budgets',
+    asgn:'Mr.R', prop:'', book:'{SNAPSHOT_BOOK1}',
+    mt:'', india:'', eastern:'', status:100, tz:'India' },
+
+  // THURSDAY
+  { id:6,  dg:'thu', task:'Check in Rolling Books',
+    asgn:'Mr.R', prop:'None', book:'{ROLLING_BOOK}',
+    mt:'12:00 AM - 12:04 AM', india:'11:30 AM - 11:34 AM', eastern:'2:00 AM - 2:04 AM',
+    status:100, tz:'India' },
+  { id:7,  dg:'thu', task:'Submit Rebuild Totals for Rolling Book',
+    asgn:'Mr.R', prop:'{PROP_A}', book:'{ROLLING_BOOK} | {PREV_MM}/{YEAR} Start',
+    mt:'12:04 AM - 12:24 AM', india:'11:34 AM - 11:54 AM', eastern:'2:04 AM - 2:24 AM',
+    status:100, tz:'India' },
+  { id:8,  dg:'thu', task:'Rebuild Totals in Rolling Book - System Process',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'12:24 AM - 3:24 AM', india:'11:54 AM - 2:54 PM', eastern:'2:24 AM - 5:24 AM',
+    status:100, tz:'India' },
+  { id:9,  dg:'thu', task:'Run Report for MLA irisktype',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'5:45 PM - 6:05 PM', india:'Fri 5:15 AM - 5:35 AM', eastern:'7:45 PM - 8:05 PM',
+    status:100, tz:'Eastern' },
+  { id:10, dg:'thu', task:'Run Report to Transfer Narratives from Opex Budget to Rolling Book',
+    asgn:'Mr.A', prop:'{PROP_A}', book:'Transfer Current Year + Next Year',
+    mt:'6:05 PM - 6:10 PM', india:'Fri 5:35 AM - 5:40 AM', eastern:'',
+    status:100, tz:'Eastern' },
+  { id:11, dg:'thu', task:'Post to Teams Site and Email YAB DL',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'6:10 PM - 6:16 PM', india:'Fri 5:40 AM - 5:46 AM', eastern:'8:00 PM - 8:06 PM',
+    status:100, tz:'Eastern' },
+  { id:12, dg:'thu', task:'Change Books Permission in ABF & Log Out Users',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'6:16 PM - 6:17 PM', india:'Fri 5:46 AM - 5:47 AM', eastern:'8:06 PM - 8:07 PM',
+    status:100, tz:'Eastern' },
+  { id:13, dg:'thu', task:'Run Unit Attribute Task Runner Schedule',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'6:17 PM - 6:27 PM', india:'', eastern:'',
+    status:100, tz:'Eastern' },
+  { id:14, dg:'thu', task:'Deactivate Full SSIS, Rebuild Unit Attribute SP, and Capex Actuals Tasks',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'6:27 PM - 6:29 PM', india:'Fri 5:57 AM - 5:59 AM', eastern:'8:27 PM - 8:29 PM',
+    status:100, tz:'Eastern' },
+  { id:15, dg:'thu', task:'Delete Orphaned System Tasks',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'6:29 PM - 6:30 PM', india:'Fri 5:59 AM - 6:00 AM', eastern:'',
+    status:100, tz:'Eastern' },
+  { id:16, dg:'thu', task:'Check in Rolling Books',
+    asgn:'Mr.A', prop:'', book:'{ROLLING_BOOK}',
+    mt:'6:30 PM - 6:34 PM', india:'Fri 6:00 AM - 6:04 AM', eastern:'8:30 PM - 8:34 PM',
+    status:100, tz:'Eastern' },
+  { id:17, dg:'thu', task:'Run Task Runner Log from 12:00 AM Mountain. Create list for any properties that completed solve AFTER rebuild tasks completed',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'6:34 PM - 6:44 PM', india:'', eastern:'',
+    status:100, tz:'Eastern' },
+  { id:18, dg:'thu', task:'Rebuild Total in Rolling Book - Submission',
+    asgn:'Mr.A', prop:'from step above', book:'{ROLLING_BOOK}',
+    mt:'6:44 PM - 6:49 PM', india:'Fri 6:14 AM - 6:19 AM', eastern:'8:44 PM - 8:49 PM',
+    status:100, tz:'Eastern' },
+  { id:19, dg:'thu', task:'Rebuild Totals in Rolling Book - System Process',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'6:49 PM - 7:09 PM', india:'Fri 6:19 AM - 6:39 AM', eastern:'8:49 PM - 9:09 PM',
+    status:100, tz:'Eastern' },
+  { id:20, dg:'thu', task:'Copy Budgets - Submission',
+    asgn:'Mr.A', prop:'{PROP_A}', book:'{SNAPSHOT_BOOK1} | {PREV_MM}/01/{YEAR} Start',
+    mt:'7:09 PM - 7:29 PM', india:'Fri 6:39 AM - 6:59 AM', eastern:'9:09 PM - 9:29 PM',
+    status:100, tz:'Eastern' },
+  { id:21, dg:'thu', task:'Notify {MEMBER_R} that Copy Budgets is Submitted',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'7:29 PM - 7:30 PM', india:'Fri 6:59 AM - 7:00 AM', eastern:'9:29 PM - 9:30 PM',
+    status:0, tz:'Eastern' },
+
+  // FRIDAY
+  { id:22, dg:'fri', task:'Copy Budget - System Process',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'7:29 PM - (~Sat 1:29 AM)', india:'6:59 AM - (~6:00 PM)', eastern:'9:29 PM - (~Sat 3:29 AM)',
+    status:100, tz:'India' },
+  { id:23, dg:'fri', task:'Research / Resolve any Errors',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'1:30 AM - 1:30 AM', india:'1:00 PM - 1:00 PM', eastern:'3:30 AM - 3:30 AM',
+    status:100, tz:'India' },
+  { id:24, dg:'fri', task:'Compare Book Results',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'1:30 AM - 2:00 AM', india:'1:00 PM - 2:00 PM', eastern:'3:30 AM - 4:00 AM',
+    status:100, tz:'India' },
+  { id:25, dg:'fri', task:'Resolve Errors after Comparison',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'2:00 AM - 2:00 AM', india:'2:00 PM - 2:00 PM', eastern:'4:00 AM - 4:00 AM',
+    status:100, tz:'India' },
+  { id:26, dg:'fri', task:'Validate Parameters in Task Runner Tasks for Snapshot Schedule',
+    asgn:'Mr.R', prop:'', book:'{SNAPSHOT_PARAM}',
+    mt:'2:00 AM - 2:05 AM', india:'2:00 PM - 2:05 PM', eastern:'',
+    status:100, tz:'India' },
+  { id:27, dg:'fri', task:'Execute Task Runner Task: Snapshot',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'2:05 AM - 2:25 AM', india:'2:05 PM - 2:25 PM', eastern:'4:05 AM - 4:25 AM',
+    status:100, tz:'India' },
+  { id:34, dg:'fri', task:'Validate SP Execution Results',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'2:25 AM - 2:30 AM', india:'2:25 PM - 2:30 PM', eastern:'4:25 AM - 4:30 AM',
+    status:100, tz:'India' },
+  { id:35, dg:'fri', task:'Run Validation Queries for Snapshot Stored Procedures',
+    asgn:'Mr.R', prop:'', book:'{SNAPSHOT_BOOK1} | Please do BEFORE Rolling Book Dates',
+    mt:'2:30 AM - 3:00 AM', india:'2:30 PM - 3:00 PM', eastern:'',
+    status:100, tz:'India' },
+  { id:36, dg:'fri', task:'Lock Snapshot Books',
+    asgn:'Mr.R', prop:'', book:'{SNAPSHOT_BOOK1}',
+    mt:'3:00 AM - 3:15 AM', india:'3:00 PM - 3:15 PM', eastern:'5:00 AM - 5:15 AM',
+    status:100, tz:'India' },
+
+  // OCTOBER ONLY: Business Plan Snapshot (same steps as above repeated for Snapshot Book 2)
+  { id:63, dg:'fri', months:[10], isHeader:true, task:'BUSINESS PLAN SNAPSHOT (OCTOBER ONLY)',
+    asgn:'Mr.R', prop:'', book:'', mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:75, dg:'fri', months:[10], task:'Copy Budget - System Process',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:76, dg:'fri', months:[10], task:'Research / Resolve any Errors',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:77, dg:'fri', months:[10], task:'Compare Book Results',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:78, dg:'fri', months:[10], task:'Resolve Errors after Comparison',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:64, dg:'fri', months:[10], task:'Validate Parameters in Task Runner Tasks for Snapshot Schedule',
+    asgn:'Mr.R', prop:'', book:'{BUSINESS_PLAN_PARAM}',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:65, dg:'fri', months:[10], task:'Execute Task Runner Task: Snapshot',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:72, dg:'fri', months:[10], task:'Validate SP Execution Results',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:73, dg:'fri', months:[10], task:'Run Validation Queries for Snapshot Stored Procedures',
+    asgn:'Mr.R', prop:'', book:'{SNAPSHOT_BOOK2} | Please do BEFORE Rolling Book Dates',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:74, dg:'fri', months:[10], task:'Lock Snapshot Books',
+    asgn:'Mr.R', prop:'', book:'{SNAPSHOT_BOOK2}',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+
+  { id:37, dg:'fri', task:'Check in Rolling Books',
+    asgn:'Mr.R', prop:'', book:'{ROLLING_BOOK}',
+    mt:'3:15 AM - 3:20 AM', india:'3:15 PM - 3:20 PM', eastern:'5:15 AM - 5:20 AM',
+    status:100, tz:'India' },
+  { id:38, dg:'fri', task:'Roll Dates - Submission',
+    asgn:'Mr.R', prop:'{PROP_C}', book:'{ROLLING_BOOK}',
+    mt:'3:20 AM - 3:30 AM', india:'3:20 PM - 3:30 PM', eastern:'5:20 AM - 5:30 AM',
+    status:100, tz:'India' },
+  { id:39, dg:'fri', task:'Roll Dates - System Process',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'3:30 AM - 5:26 AM', india:'3:30 PM - 5:26 PM', eastern:'5:30 AM - 7:26 AM',
+    status:100, tz:'India' },
+  { id:40, dg:'fri', task:'Run Report to fix Bad Data from Copy',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'5:26 AM - 5:29 AM', india:'5:26 PM - 5:29 PM', eastern:'7:26 AM - 7:29 AM',
+    status:100, tz:'India' },
+  { id:41, dg:'fri', task:'Contact Once Above Tasks Completed',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'5:29 AM - 5:30 AM', india:'5:29 PM - 5:30 PM', eastern:'7:29 AM - 7:30 AM',
+    status:100, tz:'India' },
+  { id:42, dg:'fri', task:'Set Default Book and Start Date in A&O',
+    asgn:'Mr.R', prop:'', book:'{ROLLING_BOOK} | {CURR_MM}/{YEAR}',
+    mt:'5:30 AM - 5:35 AM', india:'5:30 PM - 5:35 PM', eastern:'7:30 AM - 7:35 AM',
+    status:100, tz:'India' },
+  { id:43, dg:'fri', task:'Send Email to Jeff, Chris, Sammi',
+    asgn:'Mr.L', prop:'', book:'',
+    mt:'5:35 AM - 5:36 AM', india:'5:35 PM - 5:36 PM', eastern:'7:35 AM - 7:36 AM',
+    status:100, tz:'India' },
+  { id:44, dg:'fri', isHeader:true, task:'MLA RENT GROWTH TASKS',
+    asgn:'Mr.A', prop:'', book:'', mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:45, dg:'fri', task:'Run MLA Abstract Audit Report',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'12:15 AM - 12:30 AM', india:'11:45 AM - 12:00 PM', eastern:'2:00 AM - 2:15 AM',
+    status:0, tz:'India' },
+  { id:46, dg:'fri', task:'ETL Updated Growth Rates - Actualized Quarterly Growth in Yr1',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'12:15 AM - 12:35 AM', india:'11:45 AM - 12:05 PM', eastern:'2:15 AM - 2:35 AM',
+    status:0, tz:'India' },
+  { id:47, dg:'fri', task:'Run MLA Abstract Audit Report with Updated Growth Rates',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'12:35 AM - 12:50 AM', india:'12:05 PM - 12:20 PM', eastern:'2:35 AM - 2:50 AM',
+    status:0, tz:'India' },
+  { id:48, dg:'fri', task:'Grow MLA Rents in FM',
+    asgn:'Mr.A', prop:'', book:'Global Market Date = {PREV_MM}/01/{YEAR}',
+    mt:'12:50 AM - 1:05 AM', india:'12:20 PM - 12:35 PM', eastern:'2:50 AM - 3:05 AM',
+    status:0, tz:'India' },
+  { id:49, dg:'fri', task:'Verify MLA Rent Growth',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'1:05 AM - 1:35 AM', india:'12:35 PM - 1:05 PM', eastern:'3:05 AM - 3:35 AM',
+    status:0, tz:'India' },
+  { id:50, dg:'fri', task:'ETL Growth Rates 2',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:51, dg:'fri', task:'Run Final MLA Audit Report',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'1:35 AM - 1:50 AM', india:'1:05 PM - 1:20 PM', eastern:'3:35 AM - 3:50 AM',
+    status:0, tz:'India' },
+  { id:52, dg:'fri', task:'Run Report to Delete Orphan System Tasks',
+    asgn:'Mr.A', prop:'', book:'',
+    mt:'5:36 AM - 5:41 AM', india:'5:36 PM - 5:41 PM', eastern:'',
+    status:100, tz:'India' },
+  { id:53, dg:'fri', task:'Global Solve Submission',
+    asgn:'Mr.A', prop:'', book:'{ROLLING_BOOK} | {CURR_MM}/{YEAR}',
+    mt:'5:41 AM - 5:46 AM', india:'5:41 PM - 5:46 PM', eastern:'7:41 AM - 7:46 AM',
+    status:100, tz:'India' },
+
+  // POST-WEEK
+  { id:54, dg:'post', task:'Global Solve - System Process',
+    asgn:'Mr.L/Mr.A', prop:'', book:'',
+    mt:'5:46 AM - (~13 hrs)', india:'5:46 PM - (~13 hrs)', eastern:'7:46 AM - (~13 hrs)',
+    status:100, tz:'Eastern' },
+  { id:55, dg:'post', task:'Resolve Errors',
+    asgn:'Mr.L', prop:'', book:'',
+    mt:'2:44 PM - 3:44 PM', india:'2:14 AM - 3:14 AM', eastern:'4:44 PM - 5:44 PM',
+    status:100, tz:'Eastern' },
+  { id:56, dg:'post', task:'Valuations Solve Submission (Open Budgets)',
+    asgn:'Mr.L', prop:'', book:'',
+    mt:'3:44 PM - 3:54 PM', india:'3:14 AM - 3:24 AM', eastern:'',
+    status:100, tz:'Eastern' },
+  { id:57, dg:'post', task:'Adjust Book Permission in ABF',
+    asgn:'Mr.L', prop:'', book:'',
+    mt:'3:54 PM - 3:59 PM', india:'3:24 AM - 3:29 AM', eastern:'5:54 PM - 5:59 PM',
+    status:100, tz:'Eastern' },
+  { id:58, dg:'post', task:'Release Books to Users',
+    asgn:'Mr.L', prop:'', book:'',
+    mt:'3:59 PM - 4:09 PM', india:'3:29 AM - 3:39 AM', eastern:'5:59 PM - 6:09 PM',
+    status:100, tz:'Eastern' },
+  { id:59, dg:'post', task:'Valuations Solve - System Process',
+    asgn:'Mr.L', prop:'', book:'',
+    mt:'3:54 PM - (~12 hrs)', india:'3:24 AM - (~12 hrs)', eastern:'',
+    status:100, tz:'Eastern' },
+  { id:60, dg:'post', task:'Resolve Errors from Valuations Solve',
+    asgn:'Mr.L', prop:'', book:'',
+    mt:'(~3:54 AM) - (~4:54 AM)', india:'', eastern:'',
+    status:100, tz:'Eastern' },
+  { id:61, dg:'post', task:'Reactivate Full SSIS, Rebuild Unit Attribute, and Capex Actuals Tasks',
+    asgn:'Mr.L', prop:'', book:'',
+    mt:'(~4:54 AM) - (~4:59 AM)', india:'(~2:24 PM) - (~2:29 PM)', eastern:'(~6:54 AM) - (~6:59 AM)',
+    status:100, tz:'Eastern' },
+  { id:62, dg:'post', task:'Update ETL Validator GPT with new Rolling Book Dates',
+    asgn:'Mr.M', prop:'', book:'',
+    mt:'4:09 PM - 5:18 PM', india:'3:39 AM - 4:48 AM', eastern:'6:09 PM - 7:18 PM',
+    status:0, tz:'Eastern' },
+];
+
+// ============================================================
+// SECTION 4: APP STATE
+// Runtime state - tracks actual time entries per task
+// ============================================================
+let STATE = {
+  year: PARAMS.selectedYear,
+  month: PARAMS.selectedMonth,
+  adminOpen: false,
+  actuals: {}
+};
+
+// Key helper: year_month_taskid ensures each month has its own actuals
+function akey(id) { return STATE.year + '_' + STATE.month + '_' + id; }
+
+// Initialize default actuals for a task (called when key not found)
+function initActual(t) {
+  // Prior to June 2026: default status 100 (completed)
+  // June 2026 onwards:  default status 0  (not started)
+  const isPast = STATE.year < 2026 || (STATE.year === 2026 && STATE.month < 6);
+  const defaultStatus = isPast ? 100 : 0;
+  return { start:'', end:'', duration:'', status:defaultStatus, tz:t.tz, comment:'' };
+}
+
+// ============================================================
+// SECTION 5: PERSISTENCE (localStorage)
+// ============================================================
+function persist() {
+  try {
+    localStorage.setItem('ttt_actuals', JSON.stringify(STATE.actuals));
+    localStorage.setItem('ttt_params',  JSON.stringify(PARAMS));
+    localStorage.setItem('ttt_members', JSON.stringify(MEMBERS));
+    localStorage.setItem('ttt_ym',      JSON.stringify({ y: STATE.year, m: STATE.month }));
+  } catch(e) {}
+  showToast('Saved');
+}
+
+function isFutureMonth(y, m) {
+  // June 2026 onwards is "future" (status should default to 0)
+  return y > 2026 || (y === 2026 && m >= 6);
+}
+
+function loadSaved() {
+  try {
+    const a = localStorage.getItem('ttt_actuals');
+    const p = localStorage.getItem('ttt_params');
+    const mb = localStorage.getItem('ttt_members');
+    const ym = localStorage.getItem('ttt_ym');
+    if (a)  Object.assign(STATE.actuals, JSON.parse(a));
+    if (p)  Object.assign(PARAMS, JSON.parse(p));
+    if (mb) { const mv = JSON.parse(mb); Object.keys(mv).forEach(k => { if (MEMBERS[k] !== undefined) MEMBERS[k] = mv[k]; }); }
+    if (ym) { const v = JSON.parse(ym); STATE.year = v.y; STATE.month = v.m; PARAMS.selectedYear = v.y; PARAMS.selectedMonth = v.m; }
+  } catch(e) {}
+  // Migration: fix any stale status=100 saved for future months
+  // Runs every load to correct any carried-over defaults
+  migrateActualStatus();
+}
+
+function migrateActualStatus() {
+  // For every saved actual key (format: year_month_taskId),
+  // if the month is June 2026 or later, force status to 0
+  // UNLESS the user has explicitly entered a start time (meaning they worked on it)
+  let changed = false;
+  Object.keys(STATE.actuals).forEach(key => {
+    const parts = key.split('_');
+    if (parts.length < 3) return;
+    const y = parseInt(parts[0]), m = parseInt(parts[1]);
+    if (isFutureMonth(y, m)) {
+      const actual = STATE.actuals[key];
+      // Only reset if no actual time has been entered (preserves real user data)
+      if (actual.status === 100 && !actual.start && !actual.end) {
+        actual.status = 0;
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    try { localStorage.setItem('ttt_actuals', JSON.stringify(STATE.actuals)); } catch(e) {}
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ============================================================
+// SECTION 6: DATE UTILITIES
+// ============================================================
+const MNAMES = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+
+function weekDates(y, m) {
+  // Returns first Thursday and Friday of month m (1-indexed)
+  let thu = null, fri = null;
+  for (let d = 1; d <= 7; d++) {
+    const dt = new Date(y, m - 1, d);
+    if (!thu && dt.getDay() === 4) thu = dt;
+    if (!fri && dt.getDay() === 5) fri = dt;
+  }
+  return { thu, fri };
+}
+
+// Returns effective Thursday/Friday: uses admin override if set, else auto-calculates
+function getEffectiveDates() {
+  const key = STATE.year + '_' + STATE.month;
+  const ov  = PARAMS.dateOverrides && PARAMS.dateOverrides[key];
+  if (ov) {
+    const fri = new Date(ov + 'T00:00:00');
+    const thu = new Date(fri);
+    thu.setDate(fri.getDate() - 1);
+    return { thu, fri, overridden: true };
+  }
+  const auto = weekDates(STATE.year, STATE.month);
+  return { thu: auto.thu, fri: auto.fri, overridden: false };
+}
+
+function fmtDate(d) {
+  return d ? d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }) : 'N/A';
+}
+
+function calcDur(s, e) {
+  if (!s || !e) return '';
+  const [sh, sm] = s.split(':').map(Number);
+  const [eh, em] = e.split(':').map(Number);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff < 0) diff += 1440;
+  const h = Math.floor(diff / 60), mn = diff % 60;
+  if (h === 0) return mn + 'm';
+  return mn === 0 ? h + 'h' : h + 'h ' + mn + 'm';
+}
+
+// ============================================================
+// PROPERTY LIST AUTO-GENERATORS
+// Type A: Jan=prevYrQ4, Feb-Apr=Q1, May-Jul=Q2, Aug-Oct=Q3, Nov-Dec=Q4
+// Type B: Jan-Mar=Q1,   Apr-Jun=Q2, Jul-Sep=Q3, Oct-Dec=Q4 (always current yr)
+// Type C: Jan=prevYrQ4, Feb-Mar=Q1, Apr-Jun=Q2, Jul-Sep=Q3, Oct-Dec=Q4
+// Format: .{y}q{n}^.{y}q{n}a^.{y}q{n}d^.{y}q{n}r
+// ============================================================
+function makePropList(qy, qn) {
+  const p = '.' + qy + 'q' + qn;
+  return p + '^' + p + 'a^' + p + 'd^' + p + 'r';
+}
+function propListA(y, m) {
+  if (m === 1)                return makePropList(y - 1, 4);
+  if (m >= 2  && m <= 4)      return makePropList(y, 1);
+  if (m >= 5  && m <= 7)      return makePropList(y, 2);
+  if (m >= 8  && m <= 10)     return makePropList(y, 3);
+                              return makePropList(y, 4);
+}
+function propListB(y, m) {
+  if (m >= 1  && m <= 3)      return makePropList(y, 1);
+  if (m >= 4  && m <= 6)      return makePropList(y, 2);
+  if (m >= 7  && m <= 9)      return makePropList(y, 3);
+                              return makePropList(y, 4);
+}
+function propListC(y, m) {
+  if (m === 1)                return makePropList(y - 1, 4);
+  if (m >= 2  && m <= 3)      return makePropList(y, 1);
+  if (m >= 4  && m <= 6)      return makePropList(y, 2);
+  if (m >= 7  && m <= 9)      return makePropList(y, 3);
+                              return makePropList(y, 4);
+}
+
+function resolve(text) {
+  if (!text) return '';
+  const y = PARAMS.selectedYear, m = PARAMS.selectedMonth;
+  const currMM = String(m).padStart(2, '0');
+  const prevM  = m === 1 ? 12 : m - 1;
+  const prevMM = String(prevM).padStart(2, '0');
+  return text
+    .replace(/\{PROP_A\}/g, propListA(y, m))
+    .replace(/\{PROP_B\}/g, propListB(y, m))
+    .replace(/\{PROP_C\}/g, propListC(y, m))
+    .replace(/\{LAST_YEAR_BOOK\}/g, PARAMS.lastYearBook)
+    .replace(/\{MEMBER_A\}/g, MEMBERS.A)
+    .replace(/\{MEMBER_R\}/g, MEMBERS.R)
+    .replace(/\{MEMBER_L\}/g, MEMBERS.L)
+    .replace(/\{MEMBER_M\}/g, MEMBERS.M)
+    .replace(/\{SNAPSHOT_BOOK1\}/g, PARAMS.snapshotBook1)
+    .replace(/\{SNAPSHOT_BOOK2\}/g, PARAMS.snapshotBook2)
+    .replace(/\{BUSINESS_PLAN_PARAM\}/g, PARAMS.businessPlanParam)
+    .replace(/\{ROLLING_BOOK\}/g, PARAMS.rollingBook)
+    .replace(/\{SNAPSHOT_PARAM\}/g, PARAMS.snapshotParam)
+    .replace(/\{YEAR_10\}/g, y + 10)
+    .replace(/\{CURR_MM\}/g, currMM)
+    .replace(/\{PREV_MM\}/g, prevMM)
+    .replace(/\{YEAR\}/g, y)
+    .replace(/\{MONTH\}/g, MNAMES[m - 1]);
+}
+
+function displayName(asgn) {
+  if (asgn === 'Mr.L/Mr.A') return MEMBERS.L + '/' + MEMBERS.A;
+  if (asgn === '-') return '-';
+  const key = asgn.replace('Mr.', '');
+  return MEMBERS[key] || asgn;
+}
+
+// ============================================================
+// SECTION 7: UI - MONTH SELECTOR
+// ============================================================
+function buildMonthSel() {
+  const sel = document.getElementById('monthSel');
+  sel.innerHTML = '';
+  [2026,2027,2028].forEach(y => {
+    const startM = y === 2026 ? 1 : 1;
+    for (let m = startM; m <= 12; m++) {
+      const o = document.createElement('option');
+      o.value = y + '-' + m;
+      o.textContent = MNAMES[m-1] + ' ' + y;
+      if (y === STATE.year && m === STATE.month) o.selected = true;
+      sel.appendChild(o);
+    }
+  });
+}
+
+// ============================================================
+// AUTO PROPERTY LIST LOGIC
+// Jan       -> (year-1) Q4
+// Feb,Mar,Apr -> year Q1
+// May,Jun,Jul -> year Q2
+// Aug,Sep,Oct -> year Q3
+// Nov,Dec     -> year Q4
+// Format: .{y}q{n}^.{y}q{n}a^.{y}q{n}d^.{y}q{n}r
+// ============================================================
+function autoPropertyList(y, m) {
+  let qy = y, qn;
+  if      (m === 1)                 { qy = y - 1; qn = 4; }
+  else if (m >= 2  && m <= 4)       { qn = 1; }
+  else if (m >= 5  && m <= 7)       { qn = 2; }
+  else if (m >= 8  && m <= 10)      { qn = 3; }
+  else                              { qn = 4; }
+  const p = '.' + qy + 'q' + qn;
+  return p + '^' + p + 'a^' + p + 'd^' + p + 'r';
+}
+
+function onMonthChange() {
+  const [y, m] = document.getElementById('monthSel').value.split('-').map(Number);
+  STATE.year = y; STATE.month = m;
+  PARAMS.selectedYear = y; PARAMS.selectedMonth = m;
+  // Auto-update all params to match new month/year
+  // Admin can still override any of these in Admin Panel
+  PARAMS.lastYearBook  = MNAMES[m - 1] + ' ' + (y - 1);
+  PARAMS.snapshotBook1 = MNAMES[m - 1] + ' ' + y;
+  PARAMS.snapshotBook2 = 'z' + (y + 1) + ' business plan';
+  PARAMS.list1         = autoPropertyList(y, m);
+  PARAMS.list2         = autoPropertyList(y, m);
+  renderDateBar();
+  renderTasks();
+  if (activeTab === 'status') renderStatus();
+  persist();
+}
+
+// ============================================================
+// SECTION 8: UI - DATE BAR
+// ============================================================
+function renderDateBar() {
+  const { thu, fri } = getEffectiveDates();
+  document.getElementById('monthBadge').textContent = MNAMES[STATE.month-1] + ' ' + STATE.year;
+  const eff = getEffectiveDates();
+  const ovBadge = eff.overridden ? ' <span style="background:#f59e0b;color:#fff;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700;margin-left:4px">CUSTOM DATE</span>' : '';
+  document.getElementById('dateBar').innerHTML =
+    `<span>Month: <b>${MNAMES[STATE.month-1]} ${STATE.year}</b></span>` +
+    `<span>Thursday: <b>${fmtDate(eff.thu)}</b>${ovBadge}</span>` +
+    `<span>Friday: <b>${fmtDate(eff.fri)}</b>${ovBadge}</span>` +
+    `<span>Pre-week tasks: complete before Thursday &nbsp;|&nbsp; Post-week tasks: continue after Friday</span>`;
+}
+
+// ============================================================
+// SECTION 9: UI - ADMIN PANEL
+// ============================================================
+function toggleAdmin() {
+  STATE.adminOpen = !STATE.adminOpen;
+  const p = document.getElementById('adminPanel');
+  p.style.display = STATE.adminOpen ? 'block' : 'none';
+  document.getElementById('adminBtn').textContent = STATE.adminOpen ? 'Close Admin' : 'Admin Panel';
+  if (STATE.adminOpen) renderAdmin();
+}
+
+function renderAdmin() {
+  document.getElementById('adminPanel').innerHTML = `
+    <div class="admin-top">
+      <h2>Admin Panel - Monthly Configuration</h2>
+      <button class="btn btn-blue" onclick="applyAdmin()">Apply Changes</button>
+    </div>
+    <div class="admin-grid">
+      <div class="sec-label">Monthly Parameters</div>
+      <div class="fg"><label>List 1</label><input id="a_l1" value="${PARAMS.list1}"></div>
+      <div class="fg"><label>List 2</label><input id="a_l2" value="${PARAMS.list2}"></div>
+      <div class="fg"><label>Last Year Book</label><input id="a_lyb" value="${PARAMS.lastYearBook}"></div>
+      <div class="fg"><label>Snapshot Book 1</label><input id="a_sb1" value="${PARAMS.snapshotBook1}"></div>
+      <div class="fg"><label>Snapshot Book 2</label><input id="a_sb2" value="${PARAMS.snapshotBook2}"></div>
+      <div class="fg"><label>Rolling Book</label><input id="a_rb" value="${PARAMS.rollingBook}"></div>
+      <div class="sec-label">Team Members</div>
+      <div class="fg"><label>Member A</label><input id="a_mA" value="${MEMBERS.A}"></div>
+      <div class="fg"><label>Member R</label><input id="a_mR" value="${MEMBERS.R}"></div>
+      <div class="fg"><label>Member L</label><input id="a_mL" value="${MEMBERS.L}"></div>
+      <div class="fg"><label>Member M</label><input id="a_mM" value="${MEMBERS.M}"></div>
+      <div class="sec-label">Snapshot Parameters</div>
+      <div class="fg"><label>Snapshot Param (Monthly Book)</label><input id="a_sp" value="${PARAMS.snapshotParam}"></div>
+      <div class="fg"><label>Snapshot Param (Business Plan)</label><input id="a_bp" value="${PARAMS.businessPlanParam}"></div>
+      <div class="sec-label">Snapshot Date Override: ${MNAMES[STATE.month-1]} ${STATE.year}</div>
+      <div class="fg" style="grid-column:1/-1">
+        <label>Custom Friday Date (overrides auto-calculation, leave blank to use system date)</label>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <input type="date" id="a_dateov" value="${(PARAMS.dateOverrides && PARAMS.dateOverrides[STATE.year+'_'+STATE.month]) || ''}"
+            style="width:180px;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:'IBM Plex Sans',sans-serif">
+          <span id="a_dateov_info" style="font-size:11.5px;color:var(--slate)"></span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-blue" style="font-size:11px;padding:5px 12px" onclick="applyDateOverride()">Set Date</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px;color:var(--red);border-color:var(--red)" onclick="clearDateOverride()">Clear Override</button>
+        </div>
+      </div>
+      <div class="sec-label">Bulk Status Update: ${MNAMES[STATE.month-1]} ${STATE.year}</div>
+    </div>
+    <div class="bulk-grid" id="bulkGrid"></div>
+    <div class="admin-grid">
+      <div class="sec-label">Clear Actual Times: ${MNAMES[STATE.month-1]} ${STATE.year}</div>
+    </div>
+    <div class="bulk-grid" id="clearGrid"></div>`;
+  renderBulkGrid();
+  renderClearGrid();
+}
+
+function renderBulkGrid() {
+  const groups = [
+    { key:'all',  label:'All Tasks'       },
+    { key:'pre',  label:'Pre-Week Tasks'  },
+    { key:'thu',  label:'Thursday Tasks'  },
+    { key:'fri',  label:'Friday Tasks'    },
+    { key:'post', label:'Post-Week Tasks' },
+  ];
+  const el = document.getElementById('bulkGrid');
+  if (!el) return;
+  el.innerHTML = groups.map(g => `
+    <div class="bulk-row">
+      <label>${g.label}</label>
+      <select id="bst_${g.key}">
+        <option value="100">100%</option>
+        <option value="50">50%</option>
+        <option value="0">0%</option>
+      </select>
+      <button onclick="bulkSetStatus('${g.key}', document.getElementById('bst_${g.key}').value, '${g.key}')">Apply</button>
+      <span class="bulk-confirm" id="bc_${g.key}">Done</span>
+    </div>`).join('');
+}
+
+function renderClearGrid() {
+  const groups = [
+    { key:'all',  label:'All Tasks'       },
+    { key:'pre',  label:'Pre-Week Tasks'  },
+    { key:'thu',  label:'Thursday Tasks'  },
+    { key:'fri',  label:'Friday Tasks'    },
+    { key:'post', label:'Post-Week Tasks' },
+  ];
+  const el = document.getElementById('clearGrid');
+  if (!el) return;
+  el.innerHTML = groups.map(g => `
+    <div class="bulk-row">
+      <label>${g.label}</label>
+      <button class="btn-danger" onclick="clearTimes('${g.key}', '${g.key}')">Clear Times</button>
+      <span class="bulk-confirm warn" id="cc_${g.key}">Cleared</span>
+    </div>`).join('');
+}
+
+function applyAdmin() {
+  const g = id => document.getElementById(id).value.trim();
+  PARAMS.list1             = g('a_l1');
+  PARAMS.list2             = g('a_l2');
+  PARAMS.lastYearBook      = g('a_lyb');
+  PARAMS.snapshotBook1     = g('a_sb1');
+  PARAMS.snapshotBook2     = g('a_sb2');
+  PARAMS.rollingBook       = g('a_rb');
+  PARAMS.snapshotParam     = g('a_sp');
+  PARAMS.businessPlanParam = g('a_bp');
+  MEMBERS.A = g('a_mA');
+  MEMBERS.R = g('a_mR');
+  MEMBERS.L = g('a_mL');
+  MEMBERS.M = g('a_mM');
+  renderTasks();
+  persist();
+}
+
+// ============================================================
+// SNAPSHOT DATE OVERRIDE
+// ============================================================
+function applyDateOverride() {
+  const val = document.getElementById('a_dateov').value;
+  const key = STATE.year + '_' + STATE.month;
+  if (!PARAMS.dateOverrides) PARAMS.dateOverrides = {};
+  if (val) {
+    const d   = new Date(val + 'T00:00:00');
+    const day = d.getDay();
+    const info = document.getElementById('a_dateov_info');
+    if (day !== 5) {
+      if (info) info.innerHTML = '<span style="color:var(--amber);font-weight:600">Warning: selected date is not a Friday (' + ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][day] + '). Thursday will be set to one day before.</span>';
+    } else {
+      if (info) info.innerHTML = '<span style="color:var(--green);font-weight:600">Friday confirmed. Thursday set to ' + new Date(d.setDate(d.getDate()-1)).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '.</span>';
+    }
+    PARAMS.dateOverrides[key] = val;
+  } else {
+    delete PARAMS.dateOverrides[key];
+    const info = document.getElementById('a_dateov_info');
+    if (info) info.textContent = '';
+  }
+  persist();
+  renderDateBar();
+  renderTasks();
+}
+
+function clearDateOverride() {
+  const key = STATE.year + '_' + STATE.month;
+  if (PARAMS.dateOverrides) delete PARAMS.dateOverrides[key];
+  const el = document.getElementById('a_dateov');
+  if (el) el.value = '';
+  const info = document.getElementById('a_dateov_info');
+  if (info) info.textContent = 'Override cleared. System date restored.';
+  persist();
+  renderDateBar();
+  renderTasks();
+}
+
+// ============================================================
+// BULK STATUS UPDATE
+// ============================================================
+function bulkSetStatus(group, val, confId) {
+  const tasks = group === 'all' ? TASKS : TASKS.filter(t => t.dg === group);
+  tasks.forEach(t => {
+    if (t.isHeader) return;
+    const k = akey(t.id);
+    if (!STATE.actuals[k]) STATE.actuals[k] = initActual(t);
+    STATE.actuals[k].status = Number(val);
+  });
+  persist();
+  renderTasks();
+  const conf = document.getElementById('bc_' + confId);
+  if (conf) {
+    conf.classList.add('show');
+    setTimeout(() => conf.classList.remove('show'), 2000);
+  }
+}
+
+// ============================================================
+// CLEAR ACTUAL TIMES
+// ============================================================
+function clearTimes(group, confId) {
+  const tasks = group === 'all' ? TASKS : TASKS.filter(t => t.dg === group);
+  tasks.forEach(t => {
+    if (t.isHeader) return;
+    const k = akey(t.id);
+    if (!STATE.actuals[k]) STATE.actuals[k] = initActual(t);
+    STATE.actuals[k].start    = '';
+    STATE.actuals[k].end      = '';
+    STATE.actuals[k].duration = '';
+  });
+  persist();
+  renderTasks();
+  const conf = document.getElementById('cc_' + confId);
+  if (conf) {
+    conf.classList.add('show');
+    setTimeout(() => conf.classList.remove('show'), 2000);
+  }
+}
+
+// ============================================================
+// SECTION 10: UI - TASK RENDERING
+// ============================================================
+const GROUPS = [
+  { key:'pre',  label:'Pre-Week Tasks',  cls:'pre',  dayKey:null },
+  { key:'thu',  label:'Thursday Tasks',  cls:'thu',  dayKey:'thu' },
+  { key:'fri',  label:'Friday Tasks',    cls:'fri',  dayKey:'fri' },
+  { key:'post', label:'Post-Week Tasks', cls:'post', dayKey:null },
+];
+
+function renderTasks() {
+  const { thu, fri } = getEffectiveDates();
+  let html = '';
+  GROUPS.forEach(g => {
+    const tasks = TASKS.filter(t => t.dg === g.key && (!t.months || t.months.includes(STATE.month)));
+    let dateStr = '';
+    if (g.dayKey === 'thu' && thu) dateStr = thu.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    if (g.dayKey === 'fri' && fri) dateStr = fri.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    if (!g.dayKey) dateStr = g.key === 'pre' ? 'Complete before Thursday' : 'Continue after Friday';
+
+    html += `<div class="day-group">
+      <div class="day-hdr ${g.cls}">
+        ${g.label}
+        <span class="day-date">(${dateStr})</span>
+        <span class="task-cnt">${tasks.length} tasks</span>
+      </div>
+      <div class="tbl-wrap">
+        <table class="ttbl">
+          <thead><tr>
+            <th>#</th><th>Task</th><th>Assigned</th>
+            <th>Property List</th><th>Book</th>
+
+            <th>Status</th><th>Timezone</th>
+            <th>Actual Start</th><th>Actual End</th>
+            <th>Duration</th><th>Comments</th>
+          </tr></thead>
+          <tbody>${tasks.map(taskRow).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+  document.getElementById('taskWrap').innerHTML = html;
+}
+
+function taskRow(t) {
+  if (t.isHeader) {
+    return `<tr style="background:#f0fdf4">
+      <td class="t-num">${t.id}</td>
+      <td colspan="13"><div class="t-name-hdr">${resolve(t.task)}</div></td>
+    </tr>`;
+  }
+  const k = akey(t.id);
+  if (!STATE.actuals[k]) STATE.actuals[k] = initActual(t);
+  const a = STATE.actuals[k];
+  const sc = a.status == 100 ? 's100' : a.status == 50 ? 's50' : 's0';
+  const prop = resolve(t.prop);
+  const book = resolve(t.book);
+  const nm   = displayName(t.asgn);
+  return `<tr>
+    <td class="t-num">${t.id}</td>
+    <td class="t-name" title="${resolve(t.task)}">${resolve(t.task)}</td>
+    <td><span class="badge-assigned">${nm}</span></td>
+    <td class="prop-cell" title="${prop}">${prop || '-'}</td>
+    <td class="book-cell" title="${book}">${book || '-'}</td>
+
+    <td>
+      <select class="ss ${sc}" onchange="upd(${t.id},'status',this.value);this.className='ss '+(this.value==100?'s100':this.value==50?'s50':'s0')">
+        <option value="0"   ${a.status==0  ?'selected':''}>0%</option>
+        <option value="50"  ${a.status==50 ?'selected':''}>50%</option>
+        <option value="100" ${a.status==100?'selected':''}>100%</option>
+      </select>
+    </td>
+    <td>
+      <select class="tzs" onchange="upd(${t.id},'tz',this.value)">
+        <option ${a.tz==='Mountain'?'selected':''}>Mountain</option>
+        <option ${a.tz==='India'   ?'selected':''}>India</option>
+        <option ${a.tz==='Eastern' ?'selected':''}>Eastern</option>
+      </select>
+    </td>
+    <td><div class="time-wrap"><input type="time" class="ti" id="ti_s_${t.id}" value="${a.start}" onchange="upd(${t.id},'start',this.value)"><button class="now-btn" onclick="setNow(${t.id},'start')">Now</button></div></td>
+    <td><div class="time-wrap"><input type="time" class="ti" id="ti_e_${t.id}" value="${a.end}" onchange="upd(${t.id},'end',this.value)"><button class="now-btn" onclick="setNow(${t.id},'end')">Now</button></div></td>
+    <td class="dur-cell" id="dur${t.id}">${a.duration}</td>
+    <td><input type="text" class="ci" placeholder="Add comment..." value="${a.comment}" oninput="upd(${t.id},'comment',this.value)"></td>
+  </tr>`;
+}
+
+function upd(id, field, val) {
+  const k = akey(id);
+  if (!STATE.actuals[k]) { const t = TASKS.find(x=>x.id===id); STATE.actuals[k] = initActual(t||{}); }
+  STATE.actuals[k][field] = val;
+  if (field === 'start' || field === 'end') {
+    const a = STATE.actuals[k];
+    const d = calcDur(a.start, a.end);
+    STATE.actuals[k].duration = d;
+    const el = document.getElementById('dur' + id);
+    if (el) el.textContent = d;
+  }
+  persist();
+}
+
+// ============================================================
+// SECTION 11: EXCEL EXPORT (ExcelJS - full formatting)
+// ============================================================
+
+const THIN = {
+  top:    {style:'thin', color:{argb:'FFD1D5DB'}},
+  left:   {style:'thin', color:{argb:'FFD1D5DB'}},
+  bottom: {style:'thin', color:{argb:'FFD1D5DB'}},
+  right:  {style:'thin', color:{argb:'FFD1D5DB'}}
+};
+
+const XL_COLS = [
+  {header:'Day',           key:'day',    width:13},
+  {header:'Task',          key:'task',   width:54},
+  {header:'Assigned',      key:'asgn',   width:14},
+  {header:'Property List', key:'prop',   width:34},
+  {header:'Book',          key:'book',   width:36},
+  {header:'Status (%)',    key:'status', width:11},
+  {header:'Timezone',      key:'tz',     width:12},
+  {header:'Actual Start',  key:'start',  width:14},
+  {header:'Actual End',    key:'end',    width:14},
+  {header:'Duration',      key:'dur',    width:12},
+  {header:'Comments',      key:'comment',width:38},
+];
+
+const GRP_COLORS = {
+  pre:  {bg:'FF92400E', fg:'FFFFFFFF', label:'PRE-WEEK TASKS'},
+  thu:  {bg:'FF1E40AF', fg:'FFFFFFFF', label:'THURSDAY TASKS'},
+  fri:  {bg:'FF065F46', fg:'FFFFFFFF', label:'FRIDAY TASKS'},
+  post: {bg:'FF4C1D95', fg:'FFFFFFFF', label:'POST-WEEK TASKS'},
+};
+
+function styleCell(cell, bgArgb, fontOpts, borderOn, alignOpts) {
+  if (bgArgb) cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:bgArgb}};
+  cell.font   = Object.assign({name:'Arial', size:10}, fontOpts || {});
+  if (borderOn !== false) cell.border = THIN;
+  cell.alignment = Object.assign({vertical:'middle'}, alignOpts || {});
+}
+
+// Convert HH:MM string (from <input type=time>) to Excel time fraction
+// Excel time = fraction of 24h day: 0.5 = 12:00 noon
+function timeStrToExcel(s) {
+  if (!s) return null;
+  const parts = s.split(':');
+  if (parts.length < 2) return null;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return null;
+  return (h * 60 + m) / 1440;
+}
+
+async function buildWorkbook(withActuals) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Monthly Task Tracker';
+  wb.created = new Date();
+
+  // ---- PARAMETERS SHEET ----
+  const wsP = wb.addWorksheet('Parameters');
+  wsP.columns = [
+    {header:'Parameter', key:'p', width:42},
+    {header:'Value',     key:'v', width:68},
+  ];
+  const pH = wsP.getRow(1);
+  pH.eachCell(c => styleCell(c, 'FFE2E8F0', {bold:true}, true, {horizontal:'center'}));
+  pH.height = 20;
+
+  const {thu, fri} = getEffectiveDates();
+  [
+    ['List1',                             PARAMS.list1],
+    ['List2',                             PARAMS.list2],
+    ['Last Year Book',                    PARAMS.lastYearBook],
+    ['Snapshot Book 1',                   PARAMS.snapshotBook1],
+    ['Snapshot Book 2',                   PARAMS.snapshotBook2],
+    ['Book',                              PARAMS.rollingBook],
+    ['Snapshot Parameter (Monthly)',      PARAMS.snapshotParam],
+    ['Snapshot Parameter (Business Plan)',PARAMS.businessPlanParam],
+    ['Thursday Date',                     thu ? fmtDate(thu) : ''],
+    ['Friday Date',                       fri ? fmtDate(fri) : ''],
+    ['Generated For',                     MNAMES[STATE.month-1] + ' ' + STATE.year],
+  ].forEach(([p, v]) => {
+    const r = wsP.addRow({p, v});
+    r.eachCell({includeEmpty:true}, c => styleCell(c, 'FFFFFFFF', {}, true));
+    r.height = 16;
+  });
+
+  // ---- TASK LIST SHEET ----
+  const wsT = wb.addWorksheet('Task List');
+  wsT.columns = XL_COLS;
+
+  // Freeze header row
+  wsT.views = [{state:'frozen', xSplit:0, ySplit:1, activeCell:'A2'}];
+
+  // Header row
+  const tH = wsT.getRow(1);
+  tH.eachCell(c => styleCell(c, 'FFE2E8F0', {bold:true}, true, {horizontal:'center', wrapText:false}));
+  tH.height = 22;
+
+  const dayLabel = {pre:'Pre-Week', thu:'Thursday', fri:'Friday', post:'Post-Week'};
+
+  ['pre','thu','fri','post'].forEach(dg => {
+    const gc = GRP_COLORS[dg];
+    const tasks = TASKS.filter(t => t.dg === dg && (!t.months || t.months.includes(STATE.month)));
+    const {thu:tD, fri:fD} = getEffectiveDates();
+    let dateSuffix = '';
+    if (dg === 'thu' && tD) dateSuffix = '  (' + tD.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ')';
+    if (dg === 'fri' && fD) dateSuffix = '  (' + fD.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ')';
+
+    // Group label row (merged, colored)
+    const gRow = wsT.addRow({day: gc.label + dateSuffix});
+    wsT.mergeCells(gRow.number, 1, gRow.number, XL_COLS.length);
+    styleCell(gRow.getCell(1), gc.bg, {bold:true, color:{argb:gc.fg}, size:10}, true, {horizontal:'left', indent:1});
+    gRow.height = 18;
+
+    let alt = 0;
+    tasks.forEach(t => {
+      if (t.isHeader) {
+        // Sub-header row
+        const sh = wsT.addRow({day: '  ' + resolve(t.task)});
+        wsT.mergeCells(sh.number, 1, sh.number, XL_COLS.length);
+        styleCell(sh.getCell(1), 'FFF0FDF4', {bold:true, color:{argb:'FF15803D'}}, true, {horizontal:'left', indent:2});
+        sh.height = 16;
+        return;
+      }
+
+      const k = akey(t.id);
+      const a = STATE.actuals[k] || initActual(t);
+      const sv100 = withActuals && Number(a.status) === 100;
+      const rowBg = sv100 ? 'FFD1FAE5' : (alt % 2 === 0 ? 'FFFFFFFF' : 'FFF1F5F9');
+      alt++;
+
+      const startVal = withActuals ? timeStrToExcel(a.start) : null;
+      const endVal   = withActuals ? timeStrToExcel(a.end)   : null;
+
+      const row = wsT.addRow({
+        day:     dayLabel[t.dg],
+        task:    resolve(t.task),
+        asgn:    displayName(t.asgn),
+        prop:    resolve(t.prop) || '',
+        book:    resolve(t.book) || '',
+        status:  withActuals ? (a.status !== undefined ? a.status + '%' : '') : '',
+        tz:      withActuals ? (a.tz || '') : '',
+        start:   startVal !== null ? startVal : '',
+        end:     endVal   !== null ? endVal   : '',
+        dur:     '',   // always formula-driven, set below
+        comment: withActuals ? (a.comment || '') : '',
+      });
+      row.height = 16;
+
+      // Apply time format to Actual Start (col 8) and Actual End (col 9)
+      const rn = row.number;
+      const startCell = row.getCell(8);
+      const endCell   = row.getCell(9);
+      const durCell   = row.getCell(10);
+
+      if (startVal !== null) startCell.numFmt = 'h:MM AM/PM';
+      if (endVal   !== null) endCell.numFmt   = 'h:MM AM/PM';
+
+      // Timezone dropdown (col 7) - data validation with the 3 timezones
+      const tzCell = row.getCell(7);
+      tzCell.dataValidation = {
+        type:        'list',
+        allowBlank:  true,
+        showDropDown: false,
+        formulae:    ['"Mountain,India,Eastern"'],
+        showErrorMessage: true,
+        errorStyle:  'warning',
+        errorTitle:  'Invalid Timezone',
+        error:       'Please select Mountain, India, or Eastern'
+      };
+
+      // Duration formula: handles overnight (end < start) by adding 1 day
+      // Displays as Xh MMm  e.g. "2h 05m"
+      if (withActuals && (startVal !== null || endVal !== null)) {
+        durCell.value = {
+          formula: `IF(AND(H${rn}<>"",I${rn}<>""),IF(I${rn}>=H${rn},I${rn}-H${rn},1+I${rn}-H${rn}),"")`,
+          result: ''
+        };
+        durCell.numFmt = '[h]:mm:ss';
+      }
+
+      row.eachCell({includeEmpty:true}, (c, ci) => {
+        if (ci === 6 && withActuals) {
+          // Status color
+          const sv = Number(a.status);
+          const sBg = sv === 100 ? 'FF6EE7B7' : sv === 50 ? 'FFFEF3C7' : 'FFFEE2E2';
+          const sFg = sv === 100 ? 'FF065F46' : sv === 50 ? 'FFB45309' : 'FFDC2626';
+          styleCell(c, sBg, {bold:true, color:{argb:sFg}}, true, {horizontal:'center'});
+        } else if (ci === 8 || ci === 9) {
+          // Start / End time cells
+          styleCell(c, rowBg, {}, true, {horizontal:'center'});
+        } else if (ci === 10) {
+          // Duration cell
+          styleCell(c, rowBg, {}, true, {horizontal:'center'});
+        } else {
+          styleCell(c, rowBg, {}, true, {
+            wrapText: ci === 2,
+            horizontal: ci === 3 ? 'center' : 'left'
+          });
+        }
+      });
+    });
+  });
+
+  return wb;
+}
+
+async function generateExcel() {
+  const wb = await buildWorkbook(false);
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'TaskList_' + MNAMES[STATE.month-1] + '_' + STATE.year + '.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function exportActuals() {
+  const wb = await buildWorkbook(true);
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'TaskList_' + MNAMES[STATE.month-1] + '_' + STATE.year + '_Actuals.xlsx';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// ============================================================
+// ACCESS CONTROL FUNCTIONS
+// ============================================================
+function submitAuth() {
+  const val = document.getElementById('authInput').value;
+  if (val === PASSWORD) {
+    SESSION_UNLOCKED = true;
+    document.getElementById('loginScreen').style.display  = 'none';
+    document.getElementById('appContent').style.display   = 'block';
+    // Boot the app now that we are authenticated
+    loadSaved();
+    buildMonthSel();
+    renderDateBar();
+    renderTasks();
+  } else {
+    document.getElementById('authError').textContent = 'Incorrect password. Please try again.';
+    document.getElementById('authInput').value = '';
+    document.getElementById('authInput').focus();
+  }
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+let activeTab = 'tasks';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('taskWrap').style.display    = tab === 'tasks'  ? '' : 'none';
+  document.getElementById('statusWrap').style.display  = tab === 'status' ? '' : 'none';
+  document.getElementById('adminPanel').style.display  = 'none';
+  STATE.adminOpen = false;
+  document.getElementById('adminBtn').textContent = 'Admin Panel';
+  document.getElementById('tabBtnTasks').classList.toggle('active',  tab === 'tasks');
+  document.getElementById('tabBtnStatus').classList.toggle('active', tab === 'status');
+  if (tab === 'status') renderStatus();
+}
+
+// ============================================================
+// STATUS TAB: COMPUTE STATS
+// ============================================================
+function parseDurMin(durStr) {
+  if (!durStr) return 0;
+  const h = durStr.match(/(\d+)h/);
+  const m = durStr.match(/(\d+)m/);
+  return (h ? parseInt(h[1]) : 0) * 60 + (m ? parseInt(m[1]) : 0);
+}
+
+function fmtMin(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  return h + 'h ' + String(m).padStart(2,'0') + 'm';
+}
+
+function computeStats() {
+  const tasks = TASKS.filter(t => !t.isHeader && (!t.months || t.months.includes(STATE.month)));
+  let done = 0, inProg = 0, pending = 0, totalMin = 0;
+  tasks.forEach(t => {
+    const a = STATE.actuals[akey(t.id)] || initActual(t);
+    if      (Number(a.status) === 100) done++;
+    else if (Number(a.status) === 50)  inProg++;
+    else                               pending++;
+    totalMin += parseDurMin(a.duration);
+  });
+  return { total: tasks.length, done, inProg, pending, totalMin };
+}
+
+function computeGroupStats(dg) {
+  const tasks = TASKS.filter(t => t.dg === dg && !t.isHeader && (!t.months || t.months.includes(STATE.month)));
+  let done = 0, inProg = 0;
+  tasks.forEach(t => {
+    const a = STATE.actuals[akey(t.id)] || initActual(t);
+    if      (Number(a.status) === 100) done++;
+    else if (Number(a.status) === 50)  inProg++;
+  });
+  return { total: tasks.length, done, inProg, pending: tasks.length - done - inProg };
+}
+
+// ============================================================
+// STATUS TAB: RENDER
+// ============================================================
+function renderStatus() {
+  const s   = computeStats();
+  const pct = s.total ? Math.round(s.done / s.total * 100) : 0;
+
+  const grpDefs = [
+    { key:'pre',  label:'Pre-Week Tasks',  color:'#92400e' },
+    { key:'thu',  label:'Thursday Tasks',  color:'#1e40af' },
+    { key:'fri',  label:'Friday Tasks',    color:'#065f46' },
+    { key:'post', label:'Post-Week Tasks', color:'#4c1d95' },
+  ];
+
+  // KPI cards
+  const cards = `
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="sc-label">Tasks completed</div>
+        <div class="sc-value">${s.done} <span style="font-size:15px;color:var(--slate)">/ ${s.total}</span></div>
+        <div class="sc-sub">${s.pending} pending &nbsp;|&nbsp; ${s.inProg} in progress</div>
+      </div>
+      <div class="stat-card c-green">
+        <div class="sc-label">Overall completion</div>
+        <div class="sc-value">${pct}%</div>
+        <div class="sc-sub">${s.done} of ${s.total} tasks done</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-label">Total time logged</div>
+        <div class="sc-value">${fmtMin(s.totalMin)}</div>
+        <div class="sc-sub">Across all tasks with actuals</div>
+      </div>
+      <div class="stat-card c-amber">
+        <div class="sc-label">In progress (50%)</div>
+        <div class="sc-value">${s.inProg}</div>
+        <div class="sc-sub">${s.pending} not yet started</div>
+      </div>
+    </div>`;
+
+  // Group progress bars
+  const progRows = grpDefs.map(g => {
+    const gs  = computeGroupStats(g.key);
+    const pct = gs.total ? Math.round(gs.done / gs.total * 100) : 0;
+    const partPct = gs.total ? Math.round((gs.done + gs.inProg * 0.5) / gs.total * 100) : 0;
+    return `
+      <div class="prog-row">
+        <div class="prog-meta">
+          <span class="prog-label">${g.label}</span>
+          <span class="prog-info">${gs.done}/${gs.total} done &nbsp; <b>${pct}%</b></span>
+        </div>
+        <div class="prog-track">
+          <div class="prog-fill" style="width:${pct}%;background:${g.color}"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const progress = `
+    <div class="stat-section-title">Progress by group</div>
+    <div class="group-prog-wrap">${progRows}</div>`;
+
+  // Task detail table (with filter state)
+  const stFilter = document.getElementById('st-filter-status') ? document.getElementById('st-filter-status').value : 'all';
+  const mbFilter = document.getElementById('st-filter-member') ? document.getElementById('st-filter-member').value : 'all';
+
+  const memberOpts = Object.keys(MEMBERS).map(k =>
+    `<option value="${k}" ${mbFilter===k?'selected':''}>${MEMBERS[k]}</option>`).join('');
+
+  const filteredTasks = TASKS.filter(t => {
+    if (t.isHeader) return false;
+    const a = STATE.actuals[akey(t.id)] || initActual(t);
+    const st = Number(a.status);
+    if (stFilter === '100' && st !== 100) return false;
+    if (stFilter === '50'  && st !== 50)  return false;
+    if (stFilter === '0'   && st !== 0)   return false;
+    if (mbFilter !== 'all') {
+      const memberName = MEMBERS[mbFilter] || '';
+      if (!t.asgn.includes(memberName) && !t.asgn.includes('Mr.' + mbFilter)) return false;
+    }
+    return true;
+  });
+
+  const dayLbl = { pre:'Pre-Week', thu:'Thursday', fri:'Friday', post:'Post-Week' };
+
+  const detailRows = filteredTasks.map((t, i) => {
+    const a   = STATE.actuals[akey(t.id)] || initActual(t);
+    const st  = Number(a.status);
+    const cls = st === 100 ? 'st-100' : st === 50 ? 'st-50' : 'st-0';
+    return `
+      <tr>
+        <td style="width:32px;color:#94a3b8">${t.id}</td>
+        <td style="max-width:300px" title="${resolve(t.task)}">${resolve(t.task)}</td>
+        <td style="width:70px;text-align:center">${displayName(t.asgn)}</td>
+        <td style="width:80px;text-align:center;color:#64748b">${dayLbl[t.dg]}</td>
+        <td style="width:72px;text-align:center"><span class="st-pill ${cls}">${st}%</span></td>
+        <td style="width:70px;text-align:center;font-family:'IBM Plex Mono',monospace;color:#64748b">${a.duration || '-'}</td>
+      </tr>`;
+  }).join('');
+
+  const details = `
+    <div class="stat-section-title" style="margin-top:4px">Task details</div>
+    <div class="detail-filters">
+      <select id="st-filter-status" onchange="renderStatus()">
+        <option value="all"  ${stFilter==='all'?'selected':''}>All tasks</option>
+        <option value="100"  ${stFilter==='100'?'selected':''}>Completed only</option>
+        <option value="50"   ${stFilter==='50' ?'selected':''}>In progress only</option>
+        <option value="0"    ${stFilter==='0'  ?'selected':''}>Pending only</option>
+      </select>
+      <select id="st-filter-member" onchange="renderStatus()">
+        <option value="all" ${mbFilter==='all'?'selected':''}>All members</option>
+        ${memberOpts}
+      </select>
+      <span style="font-size:11px;color:#64748b;align-self:center">${filteredTasks.length} task${filteredTasks.length!==1?'s':''} shown</span>
+    </div>
+    <div class="detail-tbl-wrap">
+      <table class="dtbl">
+        <thead><tr>
+          <th>#</th><th>Task</th><th>Assigned</th><th>Group</th><th>Status</th><th>Duration</th>
+        </tr></thead>
+        <tbody>${detailRows || '<tr><td colspan="6" style="text-align:center;padding:16px;color:#94a3b8">No tasks match the selected filters</td></tr>'}</tbody>
+      </table>
+    </div>`;
+
+  document.getElementById('statusWrap').innerHTML =
+    `<div style="max-width:1400px">${cards}${progress}${details}</div>`;
+}
+
+// ============================================================
+// SET CURRENT TIME
+// ============================================================
+function setNow(id, field) {
+  const now = new Date();
+  const hh  = String(now.getHours()).padStart(2, '0');
+  const mm  = String(now.getMinutes()).padStart(2, '0');
+  const t   = hh + ':' + mm;
+  const elId = field === 'start' ? 'ti_s_' + id : 'ti_e_' + id;
+  const el  = document.getElementById(elId);
+  if (el) el.value = t;
+  upd(id, field, t);
+}
+
+// ============================================================
+// INIT: Focus password field on load
+// App content loads only after correct password is entered.
+// ============================================================
+document.getElementById('authInput').focus();
+</script>
+</body>
+</html>
