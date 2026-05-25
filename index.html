@@ -668,7 +668,8 @@ let PARAMS = {
   snapshotParam:     "0^''^0d45e964.groups.Company.com@amer.teams.ms^",
   businessPlanParam: "1^''^0d45e964.groups.Company.com@amer.teams.ms^",
   selectedYear:      2026,
-  selectedMonth:     5
+  selectedMonth:     5,
+  dateOverrides:     {}
 };
 
 // ============================================================
@@ -798,24 +799,6 @@ const TASKS = [
     asgn:'Mr.R', prop:'', book:'',
     mt:'2:05 AM - 2:25 AM', india:'2:05 PM - 2:25 PM', eastern:'4:05 AM - 4:25 AM',
     status:100, tz:'India' },
-  { id:28, dg:'fri', task:'Occupancy Details SP',
-    asgn:'-', prop:'', book:'',
-    mt:'', india:'', eastern:'', status:100, tz:'India' },
-  { id:29, dg:'fri', task:'Area Change SP',
-    asgn:'-', prop:'', book:'',
-    mt:'', india:'', eastern:'', status:100, tz:'India' },
-  { id:30, dg:'fri', task:'Camrule SP',
-    asgn:'-', prop:'', book:'',
-    mt:'', india:'', eastern:'', status:100, tz:'India' },
-  { id:31, dg:'fri', task:'FM Assumptions SP',
-    asgn:'-', prop:'', book:'',
-    mt:'', india:'', eastern:'', status:100, tz:'India' },
-  { id:32, dg:'fri', task:'MLA History SP',
-    asgn:'-', prop:'', book:'',
-    mt:'', india:'', eastern:'', status:100, tz:'India' },
-  { id:33, dg:'fri', task:'Forecast Units SP',
-    asgn:'-', prop:'', book:'',
-    mt:'', india:'', eastern:'', status:100, tz:'India' },
   { id:34, dg:'fri', task:'Validate SP Execution Results',
     asgn:'Mr.R', prop:'', book:'',
     mt:'2:25 AM - 2:30 AM', india:'2:25 PM - 2:30 PM', eastern:'4:25 AM - 4:30 AM',
@@ -828,6 +811,38 @@ const TASKS = [
     asgn:'Mr.R', prop:'', book:'{SNAPSHOT_BOOK1}',
     mt:'3:00 AM - 3:15 AM', india:'3:00 PM - 3:15 PM', eastern:'5:00 AM - 5:15 AM',
     status:100, tz:'India' },
+
+  // OCTOBER ONLY: Business Plan Snapshot (same steps as above repeated for Snapshot Book 2)
+  { id:63, dg:'fri', months:[10], isHeader:true, task:'BUSINESS PLAN SNAPSHOT (OCTOBER ONLY)',
+    asgn:'Mr.R', prop:'', book:'', mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:75, dg:'fri', months:[10], task:'Copy Budget - System Process',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:76, dg:'fri', months:[10], task:'Research / Resolve any Errors',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:77, dg:'fri', months:[10], task:'Compare Book Results',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:78, dg:'fri', months:[10], task:'Resolve Errors after Comparison',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:64, dg:'fri', months:[10], task:'Validate Parameters in Task Runner Tasks for Snapshot Schedule',
+    asgn:'Mr.R', prop:'', book:'{BUSINESS_PLAN_PARAM}',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:65, dg:'fri', months:[10], task:'Execute Task Runner Task: Snapshot',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:72, dg:'fri', months:[10], task:'Validate SP Execution Results',
+    asgn:'Mr.R', prop:'', book:'',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:73, dg:'fri', months:[10], task:'Run Validation Queries for Snapshot Stored Procedures',
+    asgn:'Mr.R', prop:'', book:'{SNAPSHOT_BOOK2} | Please do BEFORE Rolling Book Dates',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+  { id:74, dg:'fri', months:[10], task:'Lock Snapshot Books',
+    asgn:'Mr.R', prop:'', book:'{SNAPSHOT_BOOK2}',
+    mt:'', india:'', eastern:'', status:0, tz:'India' },
+
   { id:37, dg:'fri', task:'Check in Rolling Books',
     asgn:'Mr.R', prop:'', book:'{ROLLING_BOOK}',
     mt:'3:15 AM - 3:20 AM', india:'3:15 PM - 3:20 PM', eastern:'5:15 AM - 5:20 AM',
@@ -949,7 +964,11 @@ function akey(id) { return STATE.year + '_' + STATE.month + '_' + id; }
 
 // Initialize default actuals for a task (called when key not found)
 function initActual(t) {
-  return { start:'', end:'', duration:'', status:t.status, tz:t.tz, comment:'' };
+  // Prior to June 2026: default status 100 (completed)
+  // June 2026 onwards:  default status 0  (not started)
+  const isPast = STATE.year < 2026 || (STATE.year === 2026 && STATE.month < 6);
+  const defaultStatus = isPast ? 100 : 0;
+  return { start:'', end:'', duration:'', status:defaultStatus, tz:t.tz, comment:'' };
 }
 
 // ============================================================
@@ -965,6 +984,11 @@ function persist() {
   showToast('Saved');
 }
 
+function isFutureMonth(y, m) {
+  // June 2026 onwards is "future" (status should default to 0)
+  return y > 2026 || (y === 2026 && m >= 6);
+}
+
 function loadSaved() {
   try {
     const a = localStorage.getItem('ttt_actuals');
@@ -976,6 +1000,32 @@ function loadSaved() {
     if (mb) { const mv = JSON.parse(mb); Object.keys(mv).forEach(k => { if (MEMBERS[k] !== undefined) MEMBERS[k] = mv[k]; }); }
     if (ym) { const v = JSON.parse(ym); STATE.year = v.y; STATE.month = v.m; PARAMS.selectedYear = v.y; PARAMS.selectedMonth = v.m; }
   } catch(e) {}
+  // Migration: fix any stale status=100 saved for future months
+  // Runs every load to correct any carried-over defaults
+  migrateActualStatus();
+}
+
+function migrateActualStatus() {
+  // For every saved actual key (format: year_month_taskId),
+  // if the month is June 2026 or later, force status to 0
+  // UNLESS the user has explicitly entered a start time (meaning they worked on it)
+  let changed = false;
+  Object.keys(STATE.actuals).forEach(key => {
+    const parts = key.split('_');
+    if (parts.length < 3) return;
+    const y = parseInt(parts[0]), m = parseInt(parts[1]);
+    if (isFutureMonth(y, m)) {
+      const actual = STATE.actuals[key];
+      // Only reset if no actual time has been entered (preserves real user data)
+      if (actual.status === 100 && !actual.start && !actual.end) {
+        actual.status = 0;
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    try { localStorage.setItem('ttt_actuals', JSON.stringify(STATE.actuals)); } catch(e) {}
+  }
 }
 
 function showToast(msg) {
@@ -1000,6 +1050,20 @@ function weekDates(y, m) {
     if (!fri && dt.getDay() === 5) fri = dt;
   }
   return { thu, fri };
+}
+
+// Returns effective Thursday/Friday: uses admin override if set, else auto-calculates
+function getEffectiveDates() {
+  const key = STATE.year + '_' + STATE.month;
+  const ov  = PARAMS.dateOverrides && PARAMS.dateOverrides[key];
+  if (ov) {
+    const fri = new Date(ov + 'T00:00:00');
+    const thu = new Date(fri);
+    thu.setDate(fri.getDate() - 1);
+    return { thu, fri, overridden: true };
+  }
+  const auto = weekDates(STATE.year, STATE.month);
+  return { thu: auto.thu, fri: auto.fri, overridden: false };
 }
 
 function fmtDate(d) {
@@ -1061,6 +1125,8 @@ function resolve(text) {
     .replace(/\{PROP_C\}/g, propListC(y, m))
     .replace(/\{LAST_YEAR_BOOK\}/g, PARAMS.lastYearBook)
     .replace(/\{SNAPSHOT_BOOK1\}/g, PARAMS.snapshotBook1)
+    .replace(/\{SNAPSHOT_BOOK2\}/g, PARAMS.snapshotBook2)
+    .replace(/\{BUSINESS_PLAN_PARAM\}/g, PARAMS.businessPlanParam)
     .replace(/\{ROLLING_BOOK\}/g, PARAMS.rollingBook)
     .replace(/\{SNAPSHOT_PARAM\}/g, PARAMS.snapshotParam)
     .replace(/\{YEAR_10\}/g, y + 10)
@@ -1083,8 +1149,9 @@ function displayName(asgn) {
 function buildMonthSel() {
   const sel = document.getElementById('monthSel');
   sel.innerHTML = '';
-  [2025,2026,2027,2028].forEach(y => {
-    for (let m = 1; m <= 12; m++) {
+  [2026,2027,2028].forEach(y => {
+    const startM = y === 2026 ? 1 : 1;
+    for (let m = startM; m <= 12; m++) {
       const o = document.createElement('option');
       o.value = y + '-' + m;
       o.textContent = MNAMES[m-1] + ' ' + y;
@@ -1122,6 +1189,7 @@ function onMonthChange() {
   // Admin can still override any of these in Admin Panel
   PARAMS.lastYearBook  = MNAMES[m - 1] + ' ' + (y - 1);
   PARAMS.snapshotBook1 = MNAMES[m - 1] + ' ' + y;
+  PARAMS.snapshotBook2 = 'z' + (y + 1) + ' business plan';
   PARAMS.list1         = autoPropertyList(y, m);
   PARAMS.list2         = autoPropertyList(y, m);
   renderDateBar();
@@ -1134,12 +1202,14 @@ function onMonthChange() {
 // SECTION 8: UI - DATE BAR
 // ============================================================
 function renderDateBar() {
-  const { thu, fri } = weekDates(STATE.year, STATE.month);
+  const { thu, fri } = getEffectiveDates();
   document.getElementById('monthBadge').textContent = MNAMES[STATE.month-1] + ' ' + STATE.year;
+  const eff = getEffectiveDates();
+  const ovBadge = eff.overridden ? ' <span style="background:#f59e0b;color:#fff;padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700;margin-left:4px">CUSTOM DATE</span>' : '';
   document.getElementById('dateBar').innerHTML =
     `<span>Month: <b>${MNAMES[STATE.month-1]} ${STATE.year}</b></span>` +
-    `<span>Thursday: <b>${fmtDate(thu)}</b></span>` +
-    `<span>Friday: <b>${fmtDate(fri)}</b></span>` +
+    `<span>Thursday: <b>${fmtDate(eff.thu)}</b>${ovBadge}</span>` +
+    `<span>Friday: <b>${fmtDate(eff.fri)}</b>${ovBadge}</span>` +
     `<span>Pre-week tasks: complete before Thursday &nbsp;|&nbsp; Post-week tasks: continue after Friday</span>`;
 }
 
@@ -1176,6 +1246,19 @@ function renderAdmin() {
       <div class="sec-label">Snapshot Parameters</div>
       <div class="fg"><label>Snapshot Param (Monthly Book)</label><input id="a_sp" value="${PARAMS.snapshotParam}"></div>
       <div class="fg"><label>Snapshot Param (Business Plan)</label><input id="a_bp" value="${PARAMS.businessPlanParam}"></div>
+      <div class="sec-label">Snapshot Date Override: ${MNAMES[STATE.month-1]} ${STATE.year}</div>
+      <div class="fg" style="grid-column:1/-1">
+        <label>Custom Friday Date (overrides auto-calculation, leave blank to use system date)</label>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <input type="date" id="a_dateov" value="${(PARAMS.dateOverrides && PARAMS.dateOverrides[STATE.year+'_'+STATE.month]) || ''}"
+            style="width:180px;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:'IBM Plex Sans',sans-serif">
+          <span id="a_dateov_info" style="font-size:11.5px;color:var(--slate)"></span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-blue" style="font-size:11px;padding:5px 12px" onclick="applyDateOverride()">Set Date</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px;color:var(--red);border-color:var(--red)" onclick="clearDateOverride()">Clear Override</button>
+        </div>
+      </div>
       <div class="sec-label">Bulk Status Update: ${MNAMES[STATE.month-1]} ${STATE.year}</div>
     </div>
     <div class="bulk-grid" id="bulkGrid"></div>
@@ -1247,6 +1330,45 @@ function applyAdmin() {
 }
 
 // ============================================================
+// SNAPSHOT DATE OVERRIDE
+// ============================================================
+function applyDateOverride() {
+  const val = document.getElementById('a_dateov').value;
+  const key = STATE.year + '_' + STATE.month;
+  if (!PARAMS.dateOverrides) PARAMS.dateOverrides = {};
+  if (val) {
+    const d   = new Date(val + 'T00:00:00');
+    const day = d.getDay();
+    const info = document.getElementById('a_dateov_info');
+    if (day !== 5) {
+      if (info) info.innerHTML = '<span style="color:var(--amber);font-weight:600">Warning: selected date is not a Friday (' + ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][day] + '). Thursday will be set to one day before.</span>';
+    } else {
+      if (info) info.innerHTML = '<span style="color:var(--green);font-weight:600">Friday confirmed. Thursday set to ' + new Date(d.setDate(d.getDate()-1)).toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '.</span>';
+    }
+    PARAMS.dateOverrides[key] = val;
+  } else {
+    delete PARAMS.dateOverrides[key];
+    const info = document.getElementById('a_dateov_info');
+    if (info) info.textContent = '';
+  }
+  persist();
+  renderDateBar();
+  renderTasks();
+}
+
+function clearDateOverride() {
+  const key = STATE.year + '_' + STATE.month;
+  if (PARAMS.dateOverrides) delete PARAMS.dateOverrides[key];
+  const el = document.getElementById('a_dateov');
+  if (el) el.value = '';
+  const info = document.getElementById('a_dateov_info');
+  if (info) info.textContent = 'Override cleared. System date restored.';
+  persist();
+  renderDateBar();
+  renderTasks();
+}
+
+// ============================================================
 // BULK STATUS UPDATE
 // ============================================================
 function bulkSetStatus(group, val, confId) {
@@ -1299,10 +1421,10 @@ const GROUPS = [
 ];
 
 function renderTasks() {
-  const { thu, fri } = weekDates(STATE.year, STATE.month);
+  const { thu, fri } = getEffectiveDates();
   let html = '';
   GROUPS.forEach(g => {
-    const tasks = TASKS.filter(t => t.dg === g.key);
+    const tasks = TASKS.filter(t => t.dg === g.key && (!t.months || t.months.includes(STATE.month)));
     let dateStr = '';
     if (g.dayKey === 'thu' && thu) dateStr = thu.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     if (g.dayKey === 'fri' && fri) dateStr = fri.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -1454,7 +1576,7 @@ async function buildWorkbook(withActuals) {
   pH.eachCell(c => styleCell(c, 'FFE2E8F0', {bold:true}, true, {horizontal:'center'}));
   pH.height = 20;
 
-  const {thu, fri} = weekDates(STATE.year, STATE.month);
+  const {thu, fri} = getEffectiveDates();
   [
     ['List1',                             PARAMS.list1],
     ['List2',                             PARAMS.list2],
@@ -1489,8 +1611,8 @@ async function buildWorkbook(withActuals) {
 
   ['pre','thu','fri','post'].forEach(dg => {
     const gc = GRP_COLORS[dg];
-    const tasks = TASKS.filter(t => t.dg === dg);
-    const {thu:tD, fri:fD} = weekDates(STATE.year, STATE.month);
+    const tasks = TASKS.filter(t => t.dg === dg && (!t.months || t.months.includes(STATE.month)));
+    const {thu:tD, fri:fD} = getEffectiveDates();
     let dateSuffix = '';
     if (dg === 'thu' && tD) dateSuffix = '  (' + tD.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ')';
     if (dg === 'fri' && fD) dateSuffix = '  (' + fD.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ')';
@@ -1672,7 +1794,7 @@ function fmtMin(min) {
 }
 
 function computeStats() {
-  const tasks = TASKS.filter(t => !t.isHeader);
+  const tasks = TASKS.filter(t => !t.isHeader && (!t.months || t.months.includes(STATE.month)));
   let done = 0, inProg = 0, pending = 0, totalMin = 0;
   tasks.forEach(t => {
     const a = STATE.actuals[akey(t.id)] || initActual(t);
@@ -1685,7 +1807,7 @@ function computeStats() {
 }
 
 function computeGroupStats(dg) {
-  const tasks = TASKS.filter(t => t.dg === dg && !t.isHeader);
+  const tasks = TASKS.filter(t => t.dg === dg && !t.isHeader && (!t.months || t.months.includes(STATE.month)));
   let done = 0, inProg = 0;
   tasks.forEach(t => {
     const a = STATE.actuals[akey(t.id)] || initActual(t);
